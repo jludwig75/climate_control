@@ -121,6 +121,7 @@ class StationDatabase:
         
         def addDataPoint(self, dataPoint):
             """ Add datapoint for station """
+            dataPoint['time'] = _timeToTimeStamp(dataPoint['time'])
             cursor = self._conn.cursor()
             cursor.execute(f"INSERT INTO sensor_data (station_id, time, temperature, humidity) VALUES ({self._id}, '{dataPoint['time']}', {dataPoint['temperature']}, {dataPoint['humidity']})")
             self._conn.commit()
@@ -152,6 +153,7 @@ class StationDatabase:
         cursor = self._conn.cursor()
         cursor.execute(f"INSERT INTO station (id, ip_address, host_name, location) VALUES ({id}, '{ipAddress}', '{hostName}', '{location}')")
         self._conn.commit()
+        return StationDatabase.Station(self._conn, id, ipAddress, hostName, location)
 
 
 def main():
@@ -178,11 +180,10 @@ def main():
         try:
             for station_id in range(3):
                 stationId = testStationId(station_id)
-                db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
-                station = db.stations[stationId]
+                station = db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
                 startTime = int(time.time())
                 for i in range(50):
-                    station.addDataPoint({ 'time': _timeToTimeStamp(startTime + i), 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42) })
+                    station.addDataPoint({ 'time': startTime + i, 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42) })
             for id, station in db.stations.items():
                 if isTestId(id):
                     print(f'station {virtualStationId(station.id)}: ipAddress={station.ipAddress}, hostName={station.hostName}, location={station.location}')

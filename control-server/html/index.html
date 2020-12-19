@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/0.7.7/chartjs-plugin-zoom.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+              height:100%; 
+              padding:0; 
+              margin:0; 
+              width:100%;
+              display:flex; 
+              flex-direction:column;
+            }
+            #config {
+              margin:0px 8px;
+              display: flex;
+              flex-flow: row;
+              align-items: center;
+              justify-content: flex-start;
+              height: 40px;
+            }
+            #periodRange {
+              width:100%;
+            }
+            .left {
+              float:left;
+            }
+            #charts {
+              flex-grow:1;
+            }
+        </style>
+        <title>Station Sensor Data</title>
+    </script>
+</head>
+    <body>
+        <div id="config">
+            <span class="left">Max&nbsp;number&nbsp;of&nbsp;samples:&nbsp;</span>
+            <input id="maxSamplesField" type="number" min="60" max="1440" value="1440" step="30" size="4" class="left" />    
+            <!-- <span class="left">.&nbsp;Sampling&nbsp;period:&nbsp;</span>
+            <input id="periodField" type="number" min="0" max="10000" value="1000" step="100" size="4" class="left" /> -->
+            <!-- <span class="left">&nbsp;ms&nbsp;</span>
+            <input id="periodRange" type="range"  min="0" max="10000" value="1000" step="100" />
+            <button id="startPauseButton">Pause</button>
+            <button id="clearButton" disabled="true">Clear</button> -->
+        </div>
+        <div id="charts">
+            <div class="chart-container" style="position: relative; height:25%;"><canvas id="analog"></canvas></div>
+          </div>
+        <script>  
+  /////////////////////////////////////
+  // CREATE ANALOG CHART
+  
+  var sensorDataChart = new Chart(document.getElementById('analog'), {
+    // The type of chart we want to create
+    type: 'scatter',
+
+    // The data for our dataset
+    data: {
+      datasets: [{
+        label: 'Station 0',
+        backgroundColor: 'rgb(0,0,0,0)',
+        borderColor: 'rgb(255, 99, 132)',
+        data: [],
+        showLine:true
+      },
+      {
+        label: 'Station 1',
+        backgroundColor: 'rgb(0,0,0,0)',
+        borderColor: 'rgb(99, 255, 132)',
+        data: [],
+        showLine:true
+      },
+      {
+        label: 'Station 2',
+        backgroundColor: 'rgb(0,0,0,0)',
+        borderColor: 'rgb(99, 132, 255)',
+        data: [],
+        showLine:true
+      }]
+    },
+
+    // Configuration options go here
+    options: {
+      maintainAspectRatio: false,
+      title: {
+        display: true,
+        text: 'Sensor Data'
+      },
+      legend: {
+        display: false
+      },
+      scales: {
+        xAxes: [{
+          id:"x-axis",
+          ticks: {
+            minRotation:0,
+            maxRotation:0
+          }
+        }],
+        yAxes: [{
+          ticks: {
+            beginAtZero:false
+          }
+        }]
+      },
+      tooltips: {
+        intersect: false
+      },
+      animation: {
+        duration: 0
+      },
+      hover: {
+        animationDuration: 0
+      },
+      
+      // Zoom plugin options
+      plugins: {
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: 'y',
+          },
+          zoom: {
+            enabled: true,
+            mode: 'y',
+          }
+        }
+      },
+      
+      onClick: function() {this.resetZoom()}
+    }
+
+  });
+
+  /////////////////////////////////////
+  // UTILITY FUNCTIONS
+
+  // Compute a string with min/max/average on the given array of (x, y) points
+  function computeStats(sampleArray) {
+    var minY = Number.MAX_SAFE_INTEGER, maxY = 0, avgY = 0;       
+    var prevX = 0;
+    sampleArray.forEach(function (point, index) {
+      if (point.y < minY) minY = point.y;
+      if (point.y > maxY) maxY = point.y;
+      if (prevX > 0) avgY = avgY + point.y * (point.x - prevX); // avg is weighted: samples with a longer period weight more
+      prevX = point.x;
+    });
+    avgY = avgY / (prevX - sampleArray[0].x);
+    return "min: " + minY + ", max: " + maxY + ", avg: " + Math.floor(avgY);
+  }
+
+
+  /////////////////////////////////////
+  // PERIODIC FETCH OF NEW DATA
+
+  var running = true;
+  var configDiv = document.getElementById("config");
+//   var periodField = document.getElementById("periodField");
+  
+  var currentGpioMask = 0;
+  
+  function fetchNewData() {
+    if (!running) return;
+    var fetchStartMs = Date.now();
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onload = function() {
+      var processingDurationMs;
+      if(xmlHttp.status != 200) {
+        // Server error
+        configDiv.style.backgroundColor = "red";
+        console.log("GET ERROR: [" + xmlHttp.status+"] " + xmlHttp.responseText);
+        processingDurationMs = new Date() - fetchStartMs;
+      }
+      else {
+        configDiv.style.backgroundColor = "white";
+
+        // Response is e.g.: {"0": [{"time": 1608415319, "temperature": 69, "humidity": 40},
+        //                          {"time": 1608415379, "temperature": 70, "humidity": 39}],
+        //                    "1": [{"time": 1608415319, "temperature": 70, "humidity": 41},
+        //                          {"time": 1608415379, "temperature": 69, "humidity": 42}]}
+        var stationData = JSON.parse(xmlHttp.responseText);
+
+        var maxSamples = parseInt(document.getElementById("maxSamplesField").value);
+        
+        // Add point to analog chart
+        // check if the property/key is defined in the object itself, not in parent
+        for (stationId in stationData) {
+            if (stationData.hasOwnProperty(stationId)) {
+                stationId = parseInt(stationId);
+                sensorData = stationData[stationId]
+                for (var i = 0; i < sensorData.length; i++) {
+                    dataPoint = sensorData[i]
+                    data = sensorDataChart.data.datasets[stationId].data;
+                    data.push({x: dataPoint.time, y: dataPoint.temperature});
+                    // Limit its length to maxSamples
+                    data.splice(0, data.length - maxSamples);
+                }
+            }
+        }
+
+        // Put stats in chart title
+        sensorDataChart.options.title.text = "Analog input (" + computeStats(data) + ") - use mouse wheel or pinch to zoom";
+        // Remember smallest X
+        var minX = data[0].x;
+        
+
+        sensorDataChart.update();
+
+        // Check if we can keep up with this fetch rate, or increase interval by 50ms if not.        
+        // processingDurationMs = new Date() - fetchStartMs;
+        // periodField.style.backgroundColor = (processingDurationMs > parseInt(periodField.value))?"#FF7777":"#FFFFFF";
+      }
+      
+    //   // Schedule next call with the requested interval minus the time needed to process the previous call
+    //   // Note that contrary to setInterval, this technique guarantees that we will never have 
+    //   // several fetch in parallel in case we can't keep up with the requested interval
+    //   var waitingDelayMs = parseInt(periodField.value) - processingDurationMs;
+    //   if (running) {
+    //     window.setTimeout(fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);
+    //   }
+    };    
+    xmlHttp.onerror = function(e) {
+      // Ajax call error
+      configDiv.style.backgroundColor = "red";
+      console.log("ERROR: [" + xmlHttp.status+"] " + xmlHttp.responseText);
+      // Also schedule next call in case of error
+    //   var waitingDelayMs = parseInt(periodField.value) - (new Date() - fetchStartMs);
+    //   window.setTimeout(fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);      
+    };
+    xmlHttp.open("GET", "/report/sensorData", true);
+    xmlHttp.send();
+  }
+  
+  /////////////////////////////////////
+  // EVENT HANDLERS
+
+//   // Keep range slider and text input in sync
+//   document.getElementById('periodRange').addEventListener('input', function (e) {
+//     document.getElementById('periodField').value = e.target.value;
+//   });
+//   document.getElementById('periodField').addEventListener('input', function (e) {
+//     document.getElementById('periodRange').value = e.target.value;
+//   });      
+
+//   // Start/pause button
+//   document.getElementById('startPauseButton').addEventListener('click', function (e) {    
+//     running = !running;
+//     if (running) {
+//       document.getElementById('startPauseButton').textContent = "Pause";
+//       document.getElementById('clearButton').disabled = true;
+//       fetchNewData();
+//     }
+//     else {
+//       document.getElementById('startPauseButton').textContent = "Start";
+//       document.getElementById('clearButton').disabled = false;
+//     }
+//   });
+
+//   // Clear button
+//   document.getElementById('clearButton').addEventListener('click', function (e) {
+//     sensorDataChart.data.datasets[0].data.length = 0;
+//     sensorDataChart.data.datasets[1].data.length = 0;
+//     sensorDataChart.update();
+//   });
+
+
+  /////////////////////////////////////
+  // GET THE BALL ROLLING
+  
+  // Get first sample
+  fetchNewData();
+   
+        </script>
+    </body>
+</html>
