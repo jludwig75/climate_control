@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from datetime import datetime
 import mariadb
+import random
 import time
 
 
@@ -91,6 +92,19 @@ class StationDatabase:
             self._hostName = hostName
             self._location = location
 
+        @property
+        def id(self):
+            return self._id
+        @property
+        def ipAddress(self):
+            return self._ipAddress
+        @property
+        def hostName(self):
+            return self._hostName
+        @property
+        def location(self):
+            return self._location
+
         def _rowToDataPoints(self, row):
             return { 'time': row[0], 'temperature': row[1], 'humidity': row[2]}
 
@@ -129,23 +143,41 @@ class StationDatabase:
 
 def main():
     def testStationId(id):
-        return 1e6 + id
+        return int(1e6 + id)
+    def virtualStationId(testId):
+        assert testId >= 1e6
+        return int(testId - 1e6)
     def isTestId(id):
-        return id >= 1e6
+        return int(id >= 1e6)
 
-    StationDatabase.createDabase()
-
-    with StationDatabase() as db:
+    def testCleanUp(db):
         # Clear out any previous test data
         for id, station in db.stations.items():
             if isTestId(id):
                 station.clearDataPoints()
                 station.remove()
 
-        stationId = testStationId(0)
-        db.addStation(stationId, '172.18.1.65', 'tempstation00', 'Upstairs Hallway')
-        station = db.stations[stationId]
-        station.addDataPoint({ 'time': _timeToTimeStamp(time.time()), 'temperature': 70, 'humidity': 40 })
+    StationDatabase.createDabase()
+
+    with StationDatabase() as db:
+        testCleanUp(db)
+
+        try:
+            for station_id in range(3):
+                stationId = testStationId(station_id)
+                db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
+                station = db.stations[stationId]
+                startTime = int(time.time())
+                for i in range(50):
+                    station.addDataPoint({ 'time': _timeToTimeStamp(startTime + i), 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42) })
+            for id, station in db.stations.items():
+                if isTestId(id):
+                    print(f'station {virtualStationId(station.id)}: ipAddress={station.ipAddress}, hostName={station.hostName}, location={station.location}')
+                    for datapoint in station.dataPoints:
+                        print(f"  {datapoint['time']}: temperature={datapoint['temperature']}, humidity={datapoint['humidity']}")
+        finally:
+            testCleanUp(db)
+
     print('End of test')
 
 if __name__ == "__main__":
