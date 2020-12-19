@@ -6,7 +6,7 @@
 #include <ESP8266WiFi.h>
 
 
-bool wifi_setup(const char* hostName, const char* ssid, const char* password, int retries)
+bool wifi_setup(const char* hostName, const char* ssid, const char* password, int timeoutMs)
 {
     WiFi.hostname(hostName);
     WiFi.mode(WIFI_STA);
@@ -14,12 +14,13 @@ bool wifi_setup(const char* hostName, const char* ssid, const char* password, in
     Serial.println("");
 
     // Wait for connection
-    int attempts = 0;
+    int msWaited = 0;
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
         Serial.print(".");
-        if (retries != -1 && ++attempts > retries)
+        msWaited += 500;
+        if (timeoutMs != -1 && msWaited > timeoutMs)
         {
             return false;
         }

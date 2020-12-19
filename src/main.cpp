@@ -22,23 +22,41 @@ const unsigned long report_interval_ms = REPORT_INTERVAL_MINUTES * 60 * 1000;   
 
 TemperatureReporter reporter(DHT_PIN, DHT_TYPE);
 
+void blinkLed(int blinkCount, int onTimeMs, int offTimeMs)
+{
+    uint8_t ledPin = LED_BUILTIN;
+    pinMode(ledPin, OUTPUT);
+    digitalWrite(ledPin, HIGH);
+
+    for (auto i = 0; i < blinkCount; i++)
+    {
+        digitalWrite(ledPin, LOW);
+        delay(onTimeMs);
+        digitalWrite(ledPin, HIGH);
+        delay(offTimeMs);
+    }
+}
+
 void setup()
 {
     Serial.begin(115200);
 
-    reporter.begin();    // initialize temperature reporter
+    Serial.println("\r\nStarting temperature sensor");
 
-    if (!wifi_setup(HOST_NAME, WIFI_SSID, WIFI_PASSWORD, 3))    // 3 Retries
+    reporter.begin();    // initialize temperature reporter first so the HW has time to initialize
+
+    if (wifi_setup(HOST_NAME, WIFI_SSID, WIFI_PASSWORD, 10 * 1000))    // 10 seconde timeout
     {
-        Serial.println("Failed to initialize WiFi!");
-        // TODO: blink LED several times
-    }
-    else
-    {
-        Serial.println("\r\nWaiting for DHT...");
+        Serial.println("Waiting for DHT...");
         delay(500);    // TODO: Might not need it with the WiFi conneciton time
 
         reporter.report();
+    }
+    else
+    {
+        Serial.println("Failed to initialize WiFi!");
+        // blink LED several times to show an error.
+        blinkLed(20, 100, 400); // 20 0.5 second intervals = 10 seconds duration. On 20% of interval. Should look like an error. :)
     }
 
     Serial.println("Sleeping...");

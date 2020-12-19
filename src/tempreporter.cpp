@@ -23,16 +23,15 @@ void TemperatureReporter::report()
 
 void TemperatureReporter::sendSensorData(int temperature, int humidity)
 {
-    Serial.printf("Sending sensor data: temperature=%u, humidity=%u\n", (int)temperature, (int)humidity);
+    Serial.printf("Sending sensor data: temperature=%u, humidity=%u\n", temperature, humidity);
 
     WiFiClient wifiClient;
     HTTPClient httpClient;
 
-    String postData = String("station_id=") + String(STATION_ID) + "&" + TEMP_VAR_NAME + "=" + String((int)temperature) + "&" + HUMIDITY_VAR_NAME + "=" + String((int)humidity);
-
     httpClient.begin(wifiClient, REPORT_URL);
     httpClient.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
+    String postData = String("station_id=") + String(STATION_ID) + "&" + TEMP_VAR_NAME + "=" + String(temperature) + "&" + HUMIDITY_VAR_NAME + "=" + String(humidity);
     auto httpCode = httpClient.POST(postData);
     if (httpCode == HTTP_CODE_OK)
     {
