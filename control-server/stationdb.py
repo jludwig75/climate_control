@@ -54,6 +54,7 @@ class StationDatabase:
 
     @staticmethod
     def createDabase():
+        """ Create database and tables if they do not exist. Does nothing if they already exist """
         conn = mariadb.connect(
                 user='climate',
                 password='Redhorn!1',
@@ -61,12 +62,15 @@ class StationDatabase:
             )
 
         with conn.cursor() as cursor:
+            dbExists = False
             cursor.execute('SHOW DATABASES')
             for (database,) in cursor:
                 if database == 'climate':
-                    return
+                    dbExists = True
+                    break
 
-            cursor.execute('CREATE DATABASE climate')
+            if not dbExists:
+                cursor.execute('CREATE DATABASE climate')
 
         StationDatabase._createTables()
 
@@ -110,32 +114,41 @@ class StationDatabase:
 
         @property
         def dataPoints(self):
+            """ Station data points """
             cursor = self._conn.cursor()
             cursor.execute(f"SELECT time,temperature,humidity FROM sensor_data WHERE station_id={self._id}")
             return [self._rowToDataPoints(row) for row in cursor]
         
         def addDataPoint(self, dataPoint):
+            """ Add datapoint for station """
             cursor = self._conn.cursor()
             cursor.execute(f"INSERT INTO sensor_data (station_id, time, temperature, humidity) VALUES ({self._id}, '{dataPoint['time']}', {dataPoint['temperature']}, {dataPoint['humidity']})")
             self._conn.commit()
         
         def clearDataPoints(self):
+            """ Clear all station data points from database """
             cursor = self._conn.cursor()
             cursor.execute(f"DELETE FROM `sensor_data` WHERE station_id={self._id}")
             self._conn.commit()
 
         def remove(self):
+            """ Remove station from registered station lists.
+                Will fail if there are data points stored for this station.
+                Remove them first by calling clearDataPoints.
+            """
             cursor = self._conn.cursor()
             cursor.execute(f"DELETE FROM `station` WHERE id={self._id}")
             self._conn.commit()
 
     @property
     def stations(self):
+        """ List registered stations """
         cursor = self._conn.cursor()
         cursor.execute('SELECT * FROM station')
         return {row[0]: StationDatabase.Station(self._conn, *row) for row in cursor}
     
     def addStation(self, id, ipAddress, hostName=None, location=None):
+        """ Add new station """
         cursor = self._conn.cursor()
         cursor.execute(f"INSERT INTO station (id, ip_address, host_name, location) VALUES ({id}, '{ipAddress}', '{hostName}', '{location}')")
         self._conn.commit()
