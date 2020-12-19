@@ -194,7 +194,7 @@
                 for (var i = 0; i < sensorData.length; i++) {
                     dataPoint = sensorData[i]
                     data = sensorDataChart.data.datasets[stationId].data;
-                    data.push({x: dataPoint.time, y: dataPoint.temperature});
+                    data.push({x: parseInt(dataPoint.time), y: parseFloat(dataPoint.temperature)});
                     // Limit its length to maxSamples
                     data.splice(0, data.length - maxSamples);
                 }

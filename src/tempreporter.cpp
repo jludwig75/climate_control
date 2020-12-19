@@ -17,11 +17,11 @@ void TemperatureReporter::begin()
 void TemperatureReporter::report()
 {
     int humidity = _dht.readHumidity();          // Read humidity (percent)
-    int temp_f = _dht.readTemperature(true);     // Read temperature as Fahrenheit
+    float temp_f = _dht.readTemperature(true);     // Read temperature as Fahrenheit
     sendSensorData(temp_f, humidity);
 }
 
-void TemperatureReporter::sendSensorData(int temperature, int humidity)
+void TemperatureReporter::sendSensorData(float temperature, int humidity)
 {
     Serial.printf("Sending sensor data: temperature=%u, humidity=%u\n", temperature, humidity);
 
