@@ -23,7 +23,7 @@ void TemperatureReporter::report()
 
 void TemperatureReporter::sendSensorData(float temperature, int humidity)
 {
-    Serial.printf("Sending sensor data: temperature=%u, humidity=%u\n", temperature, humidity);
+    Serial.printf("Sending sensor data: temperature=%.2f, humidity=%u\n", temperature, humidity);
 
     WiFiClient wifiClient;
     HTTPClient httpClient;

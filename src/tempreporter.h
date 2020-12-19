@@ -17,6 +17,6 @@ class TemperatureReporter
         void begin();
         void report();
     private:
-        void sendSensorData(int temperature, int humidity);
+        void sendSensorData(float temperature, int humidity);
         DHT _dht;
 };
