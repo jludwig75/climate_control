@@ -31,6 +31,9 @@
             #charts {
               flex-grow:1;
             }
+            #analog {
+                height: 600px;
+            }
         </style>
         <title>Station Sensor Data</title>
     </script>
@@ -47,7 +50,7 @@
             <button id="clearButton" disabled="true">Clear</button> -->
         </div>
         <div id="charts">
-            <div class="chart-container" style="position: relative; height:25%;"><canvas id="analog"></canvas></div>
+            <div class="chart-container" style="position: relative; height:75%;"><canvas id="analog"></canvas></div>
           </div>
         <script>  
   /////////////////////////////////////
@@ -184,6 +187,9 @@
         var stationData = JSON.parse(xmlHttp.responseText);
 
         var maxSamples = parseInt(document.getElementById("maxSamplesField").value);
+
+        var nowSec = Math.round(Date.now() / 1000);
+        var oldestTime = nowSec - maxSamples * 60;
         
         // Add point to analog chart
         // check if the property/key is defined in the object itself, not in parent
@@ -191,8 +197,12 @@
             if (stationData.hasOwnProperty(stationId)) {
                 stationId = parseInt(stationId);
                 sensorData = stationData[stationId]
+                sensorDataChart.data.datasets[stationId].data = []
                 for (var i = 0; i < sensorData.length; i++) {
                     dataPoint = sensorData[i]
+                    if (dataPoint.time < oldestTime) {
+                        continue;
+                    }
                     data = sensorDataChart.data.datasets[stationId].data;
                     data.push({x: parseInt(dataPoint.time), y: parseFloat(dataPoint.temperature)});
                     // Limit its length to maxSamples
@@ -266,6 +276,9 @@
 //     sensorDataChart.update();
 //   });
 
+document.getElementById('maxSamplesField').addEventListener('change', (event) => {
+    fetchNewData();
+})
 
   /////////////////////////////////////
   // GET THE BALL ROLLING
