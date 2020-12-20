@@ -17,15 +17,15 @@ class Root(object):
         temp = float(temp)
         humidity = int(humidity)
         print(f'received sensor data: station={station_id}, temp={temp}, humidity={humidity}')
-        db = StationDatabase()
-        if station_id not in db.stations:
-            station = db.addStation(int(station_id), cherrypy.request.remote.ip, cherrypy.request.remote.name)  # TODO get ip address and hostname. The location will be set later.
-        else:
-            station = db.stations[station_id]
-        station.addDataPoint({ 'time': time.time(),
-                                'temperature': temp,
-                                'humidity': humidity
-                                })
+        with StationDatabase() as db:
+            if station_id not in db.stations:
+                station = db.addStation(int(station_id), cherrypy.request.remote.ip, cherrypy.request.remote.name)  # TODO get ip address and hostname. The location will be set later.
+            else:
+                station = db.stations[station_id]
+            station.addDataPoint({ 'time': time.time(),
+                                    'temperature': temp,
+                                    'humidity': humidity
+                                    })
 
 if __name__ == "__main__":
     conf = {
