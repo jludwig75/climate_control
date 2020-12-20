@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/0.7.7/chartjs-plugin-zoom.js"></script>
@@ -32,7 +33,7 @@
               flex-grow:1;
             }
             #analog {
-                height: 600px;
+                height: 400px;
             }
         </style>
         <title>Station Sensor Data</title>
@@ -40,8 +41,8 @@
 </head>
     <body>
         <div id="config">
-            <span class="left">Max&nbsp;number&nbsp;of&nbsp;samples:&nbsp;</span>
-            <input id="maxSamplesField" type="number" min="60" max="1440" value="1440" step="30" size="4" class="left" />    
+            <span class="left">Max hours to show:&nbsp;</span>
+            <input id="maxSamplesField" type="number" min="1" max="24" value="24" step="0.5" size="4" class="left" />    
             <!-- <span class="left">.&nbsp;Sampling&nbsp;period:&nbsp;</span>
             <input id="periodField" type="number" min="0" max="10000" value="1000" step="100" size="4" class="left" /> -->
             <!-- <span class="left">&nbsp;ms&nbsp;</span>
@@ -98,6 +99,11 @@
       scales: {
         xAxes: [{
           id:"x-axis",
+          type:"time",
+          time: {
+            unit: 'minute',
+            stepSize: 30
+          },
           ticks: {
             minRotation:0,
             maxRotation:0
@@ -186,10 +192,18 @@
         //                          {"time": 1608415379, "temperature": 69, "humidity": 42}]}
         var stationData = JSON.parse(xmlHttp.responseText);
 
-        var maxSamples = parseInt(document.getElementById("maxSamplesField").value);
+        var maxSamples = Math.floor(parseFloat(document.getElementById("maxSamplesField").value) * 60);
 
         var nowSec = Math.round(Date.now() / 1000);
         var oldestTime = nowSec - maxSamples * 60;
+
+        if (maxSamples <= 360) {
+            sensorDataChart.options.scales.xAxes[0].time.stepSize = 15;
+        } else if (maxSamples <= 720) {
+            sensorDataChart.options.scales.xAxes[0].time.stepSize = 30;
+        } else {
+            sensorDataChart.options.scales.xAxes[0].time.stepSize = 60;
+        }
         
         // Add point to analog chart
         // check if the property/key is defined in the object itself, not in parent
@@ -204,7 +218,7 @@
                         continue;
                     }
                     data = sensorDataChart.data.datasets[stationId].data;
-                    data.push({x: parseInt(dataPoint.time), y: parseFloat(dataPoint.temperature)});
+                    data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint.temperature)});
                     // Limit its length to maxSamples
                     data.splice(0, data.length - maxSamples);
                 }
