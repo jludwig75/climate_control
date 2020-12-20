@@ -14,7 +14,7 @@ class Root(object):
     @cherrypy.tools.allow(methods=['POST'])
     def report_sensor_data(self, station_id, temp, humidity):
         station_id = int(station_id)
-        temp = int(temp)
+        temp = float(temp)
         humidity = int(humidity)
         print(f'received sensor data: station={station_id}, temp={temp}, humidity={humidity}')
         db = StationDatabase()
