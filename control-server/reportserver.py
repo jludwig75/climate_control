@@ -28,9 +28,9 @@ class ReportServer(object):
                 for dataPoint in station.dataPoints:
                     dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
                     if stationId == 1:  # Vent monitor
-                        if dataPoint['temperature'] > 77:   # 5 degrees higher than the thermostat would ever be set to for heating
-                            dataPoint['temperature'] = 77
-                        elif dataPoint['temperature'] < 60: # 5 degrees lower than the thermostat would ever be set to for cooling
-                            dataPoint['temperature'] = 60
+                        temp = dataPoint['temperature']
+                        # if temp > 75:
+                        #     temp = 75 + (temp - 75) / 10
+                        #     dataPoint['temperature'] = temp
                     map[stationId].append(dataPoint)
         return json.dumps(map)
