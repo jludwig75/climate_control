@@ -18,7 +18,7 @@ CREATE TABLE sensor_data (
         id INT AUTO_INCREMENT PRIMARY KEY,
         station_id INT NOT NULL,
         time TIMESTAMP NOT NULL,
-        temperature INT NOT NULL,
+        temperature FLOAT NOT NULL,
         humidity INT,
         INDEX(station_id),
         CONSTRAINT `fk_data_station`
