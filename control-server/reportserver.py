@@ -20,7 +20,7 @@ def differentiateData(data, getValue, getTime, createNewItem):
     for dp in data:
         if lastDp != None:
             newValue = (getValue(dp) - getValue(lastDp)) / (getTime(dp) - getTime(lastDp))
-            if abs(newValue) < 0.005:
+            if abs(newValue) < 0.004:
                 newValue = 0
             dData.append(createNewItem(dp, newValue))
         lastDp = dp
@@ -67,15 +67,12 @@ class ReportServer(object):
             dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
 
         # 1. Smooth the data
-        smoothData(data, 5, lambda item: item['temperature'], putItem)
+        smoothData(data, 3, lambda item: item['temperature'], putItem)
 
         # 2. Differentiate the data
         dData = differentiateData(data, lambda item: item['temperature'], lambda item: item['time'], createNewItem)
 
-        # 3. Smooth the differentiated data
-        smoothData(dData, 5, lambda item: item['temperature'], putItem)
-
-        # 4. Analyze the differentiated data
+        # 3. Analyze the differentiated data
         lastDp = None
         lastThermostatValue = None
         thermostatState = []
