@@ -1,8 +1,30 @@
 import cherrypy
+import functools
 import json
 import random
 from stationdb import StationDatabase
 import time
+
+
+def smoothData(data, period, get, put):
+    lastValues = []
+    for d in data:
+        lastValues.append(get(d))
+        if len(lastValues) > period:
+            lastValues.pop(0)
+        put(d, sum(lastValues) / len(lastValues))
+
+def differentiateData(data, getValue, getTime, createNewItem):
+    dData = [createNewItem(data[0], 0)]
+    lastDp = None
+    for dp in data:
+        if lastDp != None:
+            newValue = (getValue(dp) - getValue(lastDp)) / (getTime(dp) - getTime(lastDp))
+            if abs(newValue) < 0.005:
+                newValue = 0
+            dData.append(createNewItem(dp, newValue))
+        lastDp = dp
+    return dData
 
 
 class ReportServer(object):
@@ -13,24 +35,64 @@ class ReportServer(object):
 
     @cherrypy.expose    # TODO: This will be replaced by a rest server, but we don't know what that looks like yet
     def sensorData(self):
-        # map = { 0: [], 1: [], 2: [] }
-        # startTime = int(time.time())
-        # for key in map.keys():
-        #     for i in range(60):
-        #         map[key].append({ 'time': startTime + i * 60,
-        #                           'temperature': random.randint(69,71),
-        #                           'humidity': random.randint(38, 42)
-        #                         })
         map = {}
         with StationDatabase() as db:
-            for stationId, station in db.stations.items():
+            stations = db.stations
+            for stationId, station in stations.items():
                 map[stationId] = []
                 for dataPoint in station.dataPoints:
                     dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
-                    if stationId == 1:  # Vent monitor
-                        temp = dataPoint['temperature']
-                        # if temp > 75:
-                        #     temp = 75 + (temp - 75) / 10
-                        #     dataPoint['temperature'] = temp
                     map[stationId].append(dataPoint)
+
+            dataPoints = stations[1].dataPoints.copy()
+            maxValue = max(dataPoint['temperature'] for dataPoint in dataPoints)
+            minValue = min(dataPoint['temperature'] for dataPoint in dataPoints)
+
+            map[3] = self._calculateThermostatState(stations[1], maxValue, minValue)
+        
         return json.dumps(map)
+
+    def _calculateThermostatState(self, ventMonitorData, onValue, offValue):
+        def getItem(item):
+            return item['temperature']
+        def putItem(item, value):
+            item['temperature'] = value
+        def createNewItem(oldItem, value):
+            item = oldItem.copy()
+            item['temperature'] = value
+            return item
+        data = ventMonitorData.dataPoints.copy()
+
+        for dataPoint in data:
+            dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
+
+        # 1. Smooth the data
+        smoothData(data, 5, lambda item: item['temperature'], putItem)
+
+        # 2. Differentiate the data
+        dData = differentiateData(data, lambda item: item['temperature'], lambda item: item['time'], createNewItem)
+
+        # 3. Smooth the differentiated data
+        smoothData(dData, 5, lambda item: item['temperature'], putItem)
+
+        # 4. Analyze the differentiated data
+        lastDp = None
+        lastThermostatValue = None
+        thermostatState = []
+        for dp in dData:
+            if lastDp is not None:
+                lastTemp = getItem(lastDp)
+                currentTemp = getItem(dp)
+                if lastTemp <= 0 and currentTemp > 0:
+                    if lastThermostatValue == offValue:
+                        thermostatState.append({'time': lastDp['time'], 'temperature': offValue})
+                    thermostatState.append({'time': lastDp['time'], 'temperature': onValue})
+                    lastThermostatValue = onValue
+                elif lastTemp >= 0 and currentTemp < 0:
+                    if lastThermostatValue == onValue:
+                        thermostatState.append({'time': lastDp['time'], 'temperature': onValue})
+                    thermostatState.append({'time': lastDp['time'], 'temperature': offValue})
+                    lastThermostatValue = offValue
+            lastDp = dp
+        return thermostatState
+
