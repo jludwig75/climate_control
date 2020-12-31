@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <BasicWifi.h>
 #include "tempreporter.h"
+#include "update.h"
 
 
 ADC_MODE(ADC_VCC);
@@ -61,11 +62,13 @@ void setup()
         // blink LED several times to show an error.
         blinkLed(20, 100, 400); // 20 0.5 second intervals = 10 seconds duration. On 20% of interval. Should look like an error. :)
     }
-
-    Serial.println("Sleeping...");
-    ESP.deepSleep(report_interval_ms * 1000);
 }
 
 void loop()
 {
+    if (!checkForUpdate())
+    {
+        Serial.println("Sleeping...");
+        ESP.deepSleep(report_interval_ms * 1000);
+    }
 }

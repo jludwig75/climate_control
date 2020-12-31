@@ -1,5 +1,8 @@
 #include "tempreporter.h"
 
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+
 #include "config.h"
 
 
@@ -24,7 +27,7 @@ void TemperatureReporter::report()
 
 void TemperatureReporter::sendSensorData(float temperature, int humidity, float vcc)
 {
-    Serial.printf("Sending sensor data: temperature=%.2f, humidity=%u\n", temperature, humidity);
+    Serial.printf("Sending sensor data: temperature=%.2f, humidity=%u, vcc=%.2f\n", temperature, humidity, vcc);
 
     WiFiClient wifiClient;
     HTTPClient httpClient;

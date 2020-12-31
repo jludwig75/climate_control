@@ -2,8 +2,6 @@
 
 #include <Arduino.h>
 #include <DHT.h>
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
 
 
 #define TEMP_VAR_NAME       "temp"
