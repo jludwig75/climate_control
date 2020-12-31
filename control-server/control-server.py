@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import cherrypy
+import os
 from reportserver import ReportServer
 from stationdb import StationDatabase
 import time
@@ -40,7 +41,8 @@ class Root(object):
 if __name__ == "__main__":
     conf = {
         '/': {
-
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir': os.path.abspath('./html')
         }
     }
 
