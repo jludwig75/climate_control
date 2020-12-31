@@ -53,6 +53,7 @@ class ReportServer(object):
         return json.dumps(map)
 
     def _calculateThermostatState(self, ventMonitorData, onValue, offValue):
+        # TODO: This might need some addition debouncing/filtering. Only time will tell how accurate it is.
         def getItem(item):
             return item['temperature']
         def putItem(item, value):
