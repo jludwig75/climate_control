@@ -6,7 +6,8 @@ const app = Vue.createApp({
             running: true,
             configDiv: null,
             periodField: null,
-            sensorDataChart: null
+            sensorDataChart: null,
+            polling: null
         }
     },
     methods: {
@@ -95,7 +96,7 @@ const app = Vue.createApp({
             var waitingDelayMs = 1000 * parseInt(this.periodField.value) - processingDurationMs;
             console.log('Processing delay: ' + processingDurationMs + ' waiting: ' + waitingDelayMs);
             if (this.running) {
-                window.setTimeout(this.fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);
+                this.polling = window.setTimeout(this.fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);
             }
         },
         fetchError(error) {
@@ -103,7 +104,7 @@ const app = Vue.createApp({
             console.log("ERROR: " + error);
             // Also schedule next call in case of error
             var waitingDelayMs = 1000 * parseInt(this.periodField.value) - (new Date() - this.fetchStartMs);
-            window.setTimeout(this.fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);      
+            this.polling = window.setTimeout(this.fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);
         },
         fetchNewData() {
             if (!this.running) {
@@ -218,7 +219,7 @@ const app = Vue.createApp({
         this.periodField = document.getElementById("periodField");
         this.fetchNewData();
     },
-    updated () {
-        
+    beforeUnmount () {
+        window.clearTimeout(this.polling);
     }
 })
