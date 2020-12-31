@@ -34,7 +34,7 @@ void TemperatureReporter::sendSensorData(float temperature, int humidity, float 
 
     String postData = String("station_id=") + String(STATION_ID) + "&" +
                         TEMP_VAR_NAME + "=" + String(temperature) + "&" +
-                        HUMIDITY_VAR_NAME + "=" + String(humidity) +
+                        HUMIDITY_VAR_NAME + "=" + String(humidity) + "&" +
                         VCC_VAR_NAME + "=" + String(vcc);
     auto httpCode = httpClient.POST(postData);
     if (httpCode == HTTP_CODE_OK)
