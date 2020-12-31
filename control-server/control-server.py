@@ -16,9 +16,10 @@ class Root(object):
         station_id = int(station_id)
         temp = float(temp)
         humidity = int(humidity)
-        vcc = 0
         if vcc is not None:
             vcc = float(vcc)
+        else:
+            vcc = 0
         print(f'received sensor data: station={station_id}, temp={temp}, humidity={humidity}, vcc={vcc}')
         with StationDatabase() as db:
             if station_id not in db.stations:

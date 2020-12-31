@@ -19,6 +19,8 @@ def differentiateData(data, getValue, getTime, createNewItem):
     lastDp = None
     for dp in data:
         if lastDp != None:
+            if getTime(dp) == getTime(lastDp):
+                continue
             newValue = (getValue(dp) - getValue(lastDp)) / (getTime(dp) - getTime(lastDp))
             if abs(newValue) < 0.004:
                 newValue = 0
