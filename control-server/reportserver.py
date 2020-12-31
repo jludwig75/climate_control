@@ -36,25 +36,25 @@ class ReportServer(object):
             return webPage.read()
 
     @cherrypy.expose    # TODO: This will be replaced by a rest server, but we don't know what that looks like yet
-    def sensorData(self):
+    def sensorData(self, maxAgeSeconds=-1):
         map = {}
         with StationDatabase() as db:
             stations = db.stations
             for stationId, station in stations.items():
                 map[stationId] = []
-                for dataPoint in station.dataPoints:
+                for dataPoint in station.dataPoints(maxAgeSeconds):
                     dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
                     map[stationId].append(dataPoint)
 
-            dataPoints = stations[1].dataPoints.copy()
+            dataPoints = stations[1].dataPoints(maxAgeSeconds).copy()
             maxValue = max(dataPoint['temperature'] for dataPoint in dataPoints)
             minValue = min(dataPoint['temperature'] for dataPoint in dataPoints)
 
-            map[3] = self._calculateThermostatState(stations[1], maxValue, minValue)
+            map[3] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds)
         
         return json.dumps(map)
 
-    def _calculateThermostatState(self, ventMonitorData, onValue, offValue):
+    def _calculateThermostatState(self, ventMonitorData, onValue, offValue, maxAgeSeconds):
         # TODO: This might need some addition debouncing/filtering. Only time will tell how accurate it is.
         def getItem(item):
             return item['temperature']
@@ -64,7 +64,7 @@ class ReportServer(object):
             item = oldItem.copy()
             item['temperature'] = value
             return item
-        data = ventMonitorData.dataPoints.copy()
+        data = ventMonitorData.dataPoints(maxAgeSeconds).copy()
 
         for dataPoint in data:
             dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))

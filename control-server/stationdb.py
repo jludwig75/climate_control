@@ -113,11 +113,14 @@ class StationDatabase:
         def _rowToDataPoints(self, row):
             return { 'time': row[0], 'temperature': row[1], 'humidity': row[2], 'vcc': row[3]}
 
-        @property
-        def dataPoints(self):
+        def dataPoints(self, maxAgeSeconds=-1):
             """ Station data points """
             cursor = self._conn.cursor()
-            cursor.execute(f"SELECT time,temperature,humidity,vcc FROM sensor_data WHERE station_id={self._id}")
+            query = f"SELECT time,temperature,humidity,vcc FROM sensor_data WHERE station_id={self._id}"
+            if maxAgeSeconds != -1:
+                oldestTime = time.time() - maxAgeSeconds
+                query += f" AND time >= '{_timeToTimeStamp(oldestTime)}'"
+            cursor.execute(query)
             return [self._rowToDataPoints(row) for row in cursor]
         
         def addDataPoint(self, dataPoint):
@@ -188,7 +191,7 @@ def main():
             for id, station in db.stations.items():
                 if isTestId(id):
                     print(f'station {virtualStationId(station.id)}: ipAddress={station.ipAddress}, hostName={station.hostName}, location={station.location}')
-                    for datapoint in station.dataPoints:
+                    for datapoint in station.dataPoints():
                         print(f"  {datapoint['time']}: temperature={datapoint['temperature']}, humidity={datapoint['humidity']}, vcc={datapoint['vcc']}")
         finally:
             testCleanUp(db)

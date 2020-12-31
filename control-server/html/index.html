@@ -262,7 +262,7 @@
       var waitingDelayMs = 1000 * parseInt(periodField.value) - (new Date() - fetchStartMs);
       window.setTimeout(fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);      
     };
-    xmlHttp.open("GET", "/report/sensorData", true);
+    xmlHttp.open("GET", "/report/sensorData?maxAgeSeconds=86400", true);  // 24 hours
     xmlHttp.send();
   }
   
