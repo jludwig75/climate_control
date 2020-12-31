@@ -37,6 +37,7 @@ class ReportServer(object):
 
     @cherrypy.expose    # TODO: This will be replaced by a rest server, but we don't know what that looks like yet
     def sensorData(self, maxAgeSeconds=-1):
+        maxAgeSeconds = float(maxAgeSeconds)
         map = {}
         with StationDatabase() as db:
             stations = db.stations
