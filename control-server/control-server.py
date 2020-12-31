@@ -32,6 +32,11 @@ class Root(object):
                                     'vcc': vcc
                                     })
 
+    @cherrypy.expose
+    @cherrypy.tools.allow(methods=['GET'])
+    def wait_for_update(self):
+        return 'no'
+
 if __name__ == "__main__":
     conf = {
         '/': {
