@@ -8,6 +8,7 @@
 
 #define TEMP_VAR_NAME       "temp"
 #define HUMIDITY_VAR_NAME   "humidity"
+#define VCC_VAR_NAME        "vcc"
 
 
 class TemperatureReporter
@@ -17,6 +18,6 @@ class TemperatureReporter
         void begin();
         void report();
     private:
-        void sendSensorData(float temperature, int humidity);
+        void sendSensorData(float temperature, int humidity, float vcc);
         DHT _dht;
 };

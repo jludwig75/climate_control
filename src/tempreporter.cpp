@@ -18,10 +18,11 @@ void TemperatureReporter::report()
 {
     int humidity = _dht.readHumidity();          // Read humidity (percent)
     float temp_f = _dht.readTemperature(true);     // Read temperature as Fahrenheit
-    sendSensorData(temp_f, humidity);
+    float vcc = ESP.getVcc() / 1000.0;
+    sendSensorData(temp_f, humidity, vcc);
 }
 
-void TemperatureReporter::sendSensorData(float temperature, int humidity)
+void TemperatureReporter::sendSensorData(float temperature, int humidity, float vcc)
 {
     Serial.printf("Sending sensor data: temperature=%.2f, humidity=%u\n", temperature, humidity);
 
@@ -31,7 +32,10 @@ void TemperatureReporter::sendSensorData(float temperature, int humidity)
     httpClient.begin(wifiClient, REPORT_URL);
     httpClient.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
-    String postData = String("station_id=") + String(STATION_ID) + "&" + TEMP_VAR_NAME + "=" + String(temperature) + "&" + HUMIDITY_VAR_NAME + "=" + String(humidity);
+    String postData = String("station_id=") + String(STATION_ID) + "&" +
+                        TEMP_VAR_NAME + "=" + String(temperature) + "&" +
+                        HUMIDITY_VAR_NAME + "=" + String(humidity) +
+                        VCC_VAR_NAME + "=" + String(vcc);
     auto httpCode = httpClient.POST(postData);
     if (httpCode == HTTP_CODE_OK)
     {

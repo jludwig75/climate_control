@@ -3,6 +3,9 @@
 #include "tempreporter.h"
 
 
+ADC_MODE(ADC_VCC);
+
+
 /* NOTE: please add this file (config.h) and define the following in it:
 #define WIFI_SSID       "SSID Name"
 #define WIFI_PASSWORD   "SSID Password"

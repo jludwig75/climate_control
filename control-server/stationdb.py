@@ -20,6 +20,7 @@ CREATE TABLE sensor_data (
         time TIMESTAMP NOT NULL,
         temperature FLOAT NOT NULL,
         humidity INT,
+        vcc FLOAT,
         INDEX(station_id),
         CONSTRAINT `fk_data_station`
             FOREIGN KEY (station_id) REFERENCES station (id)
@@ -110,20 +111,20 @@ class StationDatabase:
             return self._location
 
         def _rowToDataPoints(self, row):
-            return { 'time': row[0], 'temperature': row[1], 'humidity': row[2]}
+            return { 'time': row[0], 'temperature': row[1], 'humidity': row[2], 'vcc': row[3]}
 
         @property
         def dataPoints(self):
             """ Station data points """
             cursor = self._conn.cursor()
-            cursor.execute(f"SELECT time,temperature,humidity FROM sensor_data WHERE station_id={self._id}")
+            cursor.execute(f"SELECT time,temperature,humidity,vcc FROM sensor_data WHERE station_id={self._id}")
             return [self._rowToDataPoints(row) for row in cursor]
         
         def addDataPoint(self, dataPoint):
             """ Add datapoint for station """
             dataPoint['time'] = _timeToTimeStamp(dataPoint['time'])
             cursor = self._conn.cursor()
-            cursor.execute(f"INSERT INTO sensor_data (station_id, time, temperature, humidity) VALUES ({self._id}, '{dataPoint['time']}', {dataPoint['temperature']}, {dataPoint['humidity']})")
+            cursor.execute(f"INSERT INTO sensor_data (station_id, time, temperature, humidity, vcc) VALUES ({self._id}, '{dataPoint['time']}', {dataPoint['temperature']}, {dataPoint['humidity']}, {dataPoint['vcc']})")
             self._conn.commit()
         
         def clearDataPoints(self):
@@ -183,12 +184,12 @@ def main():
                 station = db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
                 startTime = int(time.time())
                 for i in range(50):
-                    station.addDataPoint({ 'time': startTime + i, 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42) })
+                    station.addDataPoint({ 'time': startTime + i, 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42), 'vcc': random.randint(300, 340) / 100.0})
             for id, station in db.stations.items():
                 if isTestId(id):
                     print(f'station {virtualStationId(station.id)}: ipAddress={station.ipAddress}, hostName={station.hostName}, location={station.location}')
                     for datapoint in station.dataPoints:
-                        print(f"  {datapoint['time']}: temperature={datapoint['temperature']}, humidity={datapoint['humidity']}")
+                        print(f"  {datapoint['time']}: temperature={datapoint['temperature']}, humidity={datapoint['humidity']}, vcc={datapoint['vcc']}")
         finally:
             testCleanUp(db)
 
