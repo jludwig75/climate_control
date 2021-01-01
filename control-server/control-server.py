@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 import cherrypy
 import os
-from reportserver import ReportServer
 from stationdb import StationDatabase
 import time
 
 
 class Root(object):
-    @cherrypy.expose
-    def index(self):
-        raise cherrypy.HTTPRedirect("/report")
-
     @cherrypy.expose
     @cherrypy.tools.allow(methods=['POST'])
     def report_sensor_data(self, station_id, temp, humidity, vcc=None):
@@ -48,5 +43,4 @@ if __name__ == "__main__":
 
     cherrypy.config.update({'server.socket_port': 8080})
     cherrypy.server.socket_host = '0.0.0.0'
-    cherrypy.tree.mount(ReportServer(), '/report', conf)
     cherrypy.quickstart(Root(), '/', conf)

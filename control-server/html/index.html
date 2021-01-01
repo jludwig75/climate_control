@@ -8,36 +8,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/0.7.7/chartjs-plugin-zoom.js"></script>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            body {
-              height:100%; 
-              padding:0; 
-              margin:0; 
-              width:100%;
-              display:flex; 
-              flex-direction:column;
-            }
-            #config {
-              margin:0px 8px;
-              display: flex;
-              flex-flow: row;
-              align-items: center;
-              justify-content: flex-start;
-              height: 40px;
-            }
-            #periodRange {
-              width:100%;
-            }
-            .left {
-              float:left;
-            }
-            #charts {
-              flex-grow:1;
-            }
-            #analog {
-                height: 400px;
-            }
-        </style>
+        <link rel="stylesheet" href="/styles.css" />
         <title>Station Sensor Data</title>
     </script>
 </head>
@@ -50,13 +21,14 @@
               <input v-model="refreshSeconds" id="periodField" type="number" min="10" max="60" step="5" size="4" class="left"/>
               <!-- <span class="left">&nbsp;ms&nbsp;</span>
               <input id="periodRange" type="range"  min="0" max="10000" value="1000" step="100" /> -->
-              <button id="startPauseButton">Pause</button>
+              <button id="startPauseButton" v-on:click="onPauseStart">{{ (running ? 'Pause' : 'Start') }}</button>
           </div>
           <div id="charts">
-              <div class="chart-container" style="position: relative; height:75%;"><canvas id="analog"></canvas></div>
+              <data-plot v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
           </div>
         </div>
         <script src="/main.js"></script>
+        <script src="/components/plot.js"></script>
         <script>
             const mountedApp = app.mount('#app')
         </script>
@@ -71,18 +43,6 @@
 //   document.getElementById('periodField').addEventListener('input', function (e) {
 //     document.getElementById('periodRange').value = e.target.value;
 //   });      
-
-  // Start/pause button
-  // document.getElementById('startPauseButton').addEventListener('click', function (e) {
-  //   running = !running;
-  //   if (running) {
-  //     document.getElementById('startPauseButton').textContent = "Pause";
-  //     fetchNewData();
-  //   }
-  //   else {
-  //     document.getElementById('startPauseButton').textContent = "Start";
-  //   }
-  // });
         </script>
     </body>
 </html>

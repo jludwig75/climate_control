@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
 import cherrypy
 import functools
 import json
-import random
+import os
 from stationdb import StationDatabase
 import time
 
@@ -97,3 +98,14 @@ class ReportServer(object):
             lastDp = dp
         return thermostatState
 
+if __name__ == "__main__":
+    conf = {
+        '/': {
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir': os.path.abspath('./html')
+        }
+    }
+
+    cherrypy.config.update({'server.socket_port': 8081})
+    cherrypy.server.socket_host = '0.0.0.0'
+    cherrypy.quickstart(ReportServer(), '/', conf)
