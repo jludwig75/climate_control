@@ -144,15 +144,15 @@ app.component('data-plot', {
     computed: {
         chart_title() {
             if (this.data_point == 'temperature') {
-                return 'Station Temperatures'
+                return 'Station Temperature'
             }
 
             if (this.data_point == 'humidity') {
-                return 'Station Humidities'
+                return 'Station Humidity'
             }
 
             if (this.data_point == 'vcc') {
-                return 'Station Supply Voltages'
+                return 'Station Supply Voltage'
             }
 
             return 'Station ' + this.data_point;
