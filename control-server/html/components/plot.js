@@ -2,8 +2,17 @@ app.component('data-plot', {
     template:
     /*html*/
 `
-<div class="chart-container" style="position: relative; height:75%;">
-    <canvas class="plot" :id="chart_id"></canvas>
+<div class="plot-div">
+    <div class="chart-heading">
+        <h3>{{ chart_title }}</h3>
+        Legend:&nbsp;
+        <span v-for="station in stations" :style="{ color: station.color}">
+            {{ station.name }}&nbsp;&nbsp;
+        </span>
+    </div>
+    <div class="chart-container" style="position: relative; height:75%;">
+        <canvas class="plot" :id="chart_id"></canvas>
+    </div>
 </div>
 `,
     props: {
@@ -40,7 +49,8 @@ app.component('data-plot', {
                 '#ffd8b1',
                 '#000075',
                 '#808080'
-            ]
+            ],
+            stations: []
         }
     },
     methods: {
@@ -104,8 +114,6 @@ app.component('data-plot', {
                 }
             }
     
-            // Put stats in chart title
-            this.sensorDataChart.options.title.text = this.chart_title;
             this.sensorDataChart.update();
         },
         getDataSet(stationId) {
@@ -129,6 +137,7 @@ app.component('data-plot', {
                 stationId: stationId
             }
             this.sensorDataChart.data.datasets.push(dataSet);
+            this.stations.push({'name': dataSet.label, 'color': dataSet.borderColor});
             return this.sensorDataChart.data.datasets[newIndex];
         }
     },
@@ -166,8 +175,7 @@ app.component('data-plot', {
             options: {
               maintainAspectRatio: false,
               title: {
-                display: true,
-                text: 'Sensor Data'
+                display: false
               },
               legend: {
                 display: false

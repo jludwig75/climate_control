@@ -5,29 +5,38 @@ body {
     width:100%;
     display:flex; 
     flex-direction:column;
-  }
+}
 
-  #config {
+#config {
     margin:0px 8px;
     display: flex;
     flex-flow: row;
     align-items: center;
     justify-content: flex-start;
     height: 40px;
-  }
+}
 
-  #periodRange {
+#periodRange {
     width:100%;
-  }
+}
 
-  .left {
+.left {
     float:left;
-  }
+}
 
-  #charts {
+#charts {
     flex-grow:1;
-  }
+}
 
-  .plot {
-      height: 275px;
-  }
+.plot {
+    height: 200px;
+}
+
+h3 {
+    margin-bottom: 5px;
+    margin-top: 5px;
+}
+
+.chart-heading {
+    padding: 10px;
+}
