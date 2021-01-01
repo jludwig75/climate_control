@@ -50,7 +50,7 @@ app.component('data-plot', {
             //                    "1": [{"time": 1608415319, "temperature": 70, "humidity": 41},
             //                          {"time": 1608415379, "temperature": 69, "humidity": 42}]}
    
-            var maxSamples = Math.floor(parseFloat(document.getElementById("maxSamplesField").value) * 60);
+            var maxSamples = this.hoursToShow * 60;
     
             var nowSec = Math.round(Date.now() / 1000);
             var oldestTime = nowSec - maxSamples * 60;
