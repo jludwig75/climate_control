@@ -79,7 +79,7 @@ const app = Vue.createApp({
             }
     
             // Put stats in chart title
-            this.sensorDataChart.options.title.text = "Station 2 (" + this.computeStats(data) + ") - use mouse wheel or pinch to zoom";
+            this.sensorDataChart.options.title.text = "Station Temperatures - use mouse wheel or pinch to zoom";
             // Remember smallest X
             var minX = data[0].x;
             
