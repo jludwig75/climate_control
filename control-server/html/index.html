@@ -24,7 +24,9 @@
               <button id="startPauseButton" v-on:click="onPauseStart">{{ (running ? 'Pause' : 'Start') }}</button>
           </div>
           <div id="charts">
-              <data-plot v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
+              <data-plot :data_point="'temperature'" v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
+              <data-plot :data_point="'humidity'" v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
+              <data-plot :data_point="'vcc'" v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
           </div>
         </div>
         <script src="/main.js"></script>

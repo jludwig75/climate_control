@@ -3,12 +3,16 @@ app.component('data-plot', {
     /*html*/
 `
 <div class="chart-container" style="position: relative; height:75%;">
-    <canvas id="analog"></canvas>
+    <canvas class="plot" :id="chart_id"></canvas>
 </div>
 `,
     props: {
         sensor_data: {
-            // type: Object,
+            type: Object,
+            required: true
+        },
+        data_point: {
+            type: String,
             required: true
         }
     },
@@ -72,7 +76,7 @@ app.component('data-plot', {
                             continue;
                         }
                         data = this.sensorDataChart.data.datasets[stationId].data;
-                        data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint.temperature)});
+                        data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint[this.data_point])});
                         // Limit its length to maxSamples
                         data.splice(0, data.length - maxSamples);
                     }
@@ -80,7 +84,7 @@ app.component('data-plot', {
             }
     
             // Put stats in chart title
-            this.sensorDataChart.options.title.text = "Station Temperatures - use mouse wheel or pinch to zoom";
+            this.sensorDataChart.options.title.text = this.chart_title;
             // Remember smallest X
             var minX = data[0].x;
             
@@ -88,8 +92,28 @@ app.component('data-plot', {
             this.sensorDataChart.update();
         }
     },
+    computed: {
+        chart_title() {
+            if (this.data_point == 'temperature') {
+                return 'Station Temperatures'
+            }
+
+            if (this.data_point == 'humidity') {
+                return 'Station Humidities'
+            }
+
+            if (this.data_point == 'vcc') {
+                return 'Station Supply Voltages'
+            }
+
+            return 'Station ' + this.data_point;
+        },
+        chart_id() {
+            return 'plot-' + this.data_point;
+        }
+    },
     mounted() {
-        this.sensorDataChart = new Chart(document.getElementById('analog'), {
+        this.sensorDataChart = new Chart(document.getElementById(this.chart_id), {
             // The type of chart we want to create
             type: 'scatter',
         

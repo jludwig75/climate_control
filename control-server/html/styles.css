@@ -27,7 +27,7 @@ body {
   #charts {
     flex-grow:1;
   }
-  
-  #analog {
-      height: 400px;
+
+  .plot {
+      height: 275px;
   }
