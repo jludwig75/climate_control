@@ -96,13 +96,9 @@ app.component('data-plot', {
                         dataSet.data = []
                         for (var i = 0; i < sensorData.length; i++) {
                             dataPoint = sensorData[i]
-                            if (dataPoint.time < oldestTime) {
-                                continue;
-                            }
-                            data = dataSet.data;
-                            data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint[this.data_point])});
+                            dataSet.data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint[this.data_point])});
                             // Limit its length to maxSamples
-                            data.splice(0, data.length - maxSamples);
+                            dataSet.data.splice(0, dataSet.data.length - maxSamples);
                         }
                     }
                 }
@@ -110,9 +106,6 @@ app.component('data-plot', {
     
             // Put stats in chart title
             this.sensorDataChart.options.title.text = this.chart_title;
-            // Remember smallest X
-            var minX = data[0].x;
-    
             this.sensorDataChart.update();
         },
         getDataSet(stationId) {
