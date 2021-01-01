@@ -34,13 +34,6 @@ class Root(object):
         return 'no'
 
 if __name__ == "__main__":
-    conf = {
-        '/': {
-            'tools.staticdir.on': True,
-            'tools.staticdir.dir': os.path.abspath('./html')
-        }
-    }
-
     cherrypy.config.update({'server.socket_port': 8080})
     cherrypy.server.socket_host = '0.0.0.0'
-    cherrypy.quickstart(Root(), '/', conf)
+    cherrypy.quickstart(Root(), '/')
