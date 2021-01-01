@@ -18,7 +18,29 @@ app.component('data-plot', {
     },
     data() {
         return {
-            sensorDataChart: null
+            sensorDataChart: null,
+            plotColors: [
+                '#e6194b',
+                '#3cb44b',
+                '#ffe119',
+                '#4363d8',
+                '#f58231',
+                '#911eb4',
+                '#46f0f0',
+                '#f032e6',
+                '#bcf60c',
+                '#fabebe',
+                '#008080',
+                '#e6beff',
+                '#9a6324',
+                '#fffac8',
+                '#800000',
+                '#aaffc3',
+                '#808000',
+                '#ffd8b1',
+                '#000075',
+                '#808080'
+            ]
         }
     },
     methods: {
@@ -69,16 +91,19 @@ app.component('data-plot', {
                 if (this.sensor_data.hasOwnProperty(stationId)) {
                     stationId = parseInt(stationId);
                     sensorData = this.sensor_data[stationId]
-                    this.sensorDataChart.data.datasets[stationId].data = []
-                    for (var i = 0; i < sensorData.length; i++) {
-                        dataPoint = sensorData[i]
-                        if (dataPoint.time < oldestTime) {
-                            continue;
+                    var dataSet = this.getDataSet(stationId);
+                    if (dataSet != null) {
+                        dataSet.data = []
+                        for (var i = 0; i < sensorData.length; i++) {
+                            dataPoint = sensorData[i]
+                            if (dataPoint.time < oldestTime) {
+                                continue;
+                            }
+                            data = dataSet.data;
+                            data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint[this.data_point])});
+                            // Limit its length to maxSamples
+                            data.splice(0, data.length - maxSamples);
                         }
-                        data = this.sensorDataChart.data.datasets[stationId].data;
-                        data.push({x: new Date(parseInt(dataPoint.time) * 1000), y: parseFloat(dataPoint[this.data_point])});
-                        // Limit its length to maxSamples
-                        data.splice(0, data.length - maxSamples);
                     }
                 }
             }
@@ -87,9 +112,31 @@ app.component('data-plot', {
             this.sensorDataChart.options.title.text = this.chart_title;
             // Remember smallest X
             var minX = data[0].x;
-            
     
             this.sensorDataChart.update();
+        },
+        getDataSet(stationId) {
+            for (dataSet of this.sensorDataChart.data.datasets) {
+                if (dataSet.stationId == stationId) {
+                    return dataSet;
+                }
+            }
+
+            return this.addDataSet(stationId);
+        },
+        addDataSet(stationId) {
+            var newIndex = this.sensorDataChart.data.datasets.length;
+            dataSet = {
+                label: 'Station ' + stationId,
+                backgroundColor: 'rgb(0,0,0,0)',
+                borderColor: this.plotColors[newIndex % this.plotColors.length],
+                data: [],
+                showLine:true,
+                cubicInterpolationMode: 'monotone',
+                stationId: stationId
+            }
+            this.sensorDataChart.data.datasets.push(dataSet);
+            return this.sensorDataChart.data.datasets[newIndex];
         }
     },
     computed: {
@@ -119,35 +166,7 @@ app.component('data-plot', {
         
             // The data for our dataset
             data: {
-              datasets: [{
-                label: 'Station 0',
-                backgroundColor: 'rgb(0,0,0,0)',
-                borderColor: 'rgb(255, 99, 132)',
-                data: [],
-                showLine:true
-              },
-              {
-                label: 'Station 1',
-                backgroundColor: 'rgb(0,0,0,0)',
-                borderColor: 'rgb(99, 255, 132)',
-                data: [],
-                showLine:true
-              },
-              {
-                label: 'Station 2',
-                backgroundColor: 'rgb(0,0,0,0)',
-                borderColor: 'rgb(99, 132, 255)',
-                data: [],
-                showLine:true
-              },
-              {
-                label: 'Thermostat State',
-                backgroundColor: 'rgb(0,0,0,0)',
-                borderColor: 'rgb(63, 63, 63)',
-                data: [],
-                showLine:true,
-                cubicInterpolationMode: 'monotone'
-              }]
+              datasets: []
             },
         
             // Configuration options go here
