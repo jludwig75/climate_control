@@ -113,12 +113,16 @@ class StationDatabase:
         def _rowToDataPoints(self, row):
             return { 'time': row[0], 'temperature': row[1], 'humidity': row[2], 'vcc': row[3]}
 
-        def dataPoints(self, maxAgeSeconds=-1):
+        def dataPoints(self, maxAgeSeconds=None, endTime=None):
             """ Station data points """
             cursor = self._conn.cursor()
             query = f"SELECT time,temperature,humidity,vcc FROM sensor_data WHERE station_id={self._id}"
-            if maxAgeSeconds != -1:
-                oldestTime = time.time() - maxAgeSeconds
+            end_time = time.time()
+            if endTime is not None:
+                end_time = float(endTime)
+                query += f" AND time <= '{_timeToTimeStamp(end_time)}'"
+            if maxAgeSeconds is not None:
+                oldestTime = end_time - maxAgeSeconds
                 query += f" AND time >= '{_timeToTimeStamp(oldestTime)}'"
             cursor.execute(query)
             return [self._rowToDataPoints(row) for row in cursor]

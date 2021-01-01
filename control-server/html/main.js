@@ -7,7 +7,9 @@ const app = Vue.createApp({
             configDiv: null,
             refreshSecondsDiv: null,
             polling: null,
-            sensor_data: null
+            sensor_data: null,
+            endTime: moment(new Date()).format('YYYY-MM-DDTHH:mm'),
+            plotTypes: ['temperature', 'humidity', 'vcc']
         }
     },
     methods: {
@@ -30,7 +32,7 @@ const app = Vue.createApp({
             var waitingDelayMs = 1000 * this.refreshSeconds - processingDurationMs;
             console.log('Processing delay: ' + processingDurationMs + ' waiting: ' + waitingDelayMs);
             if (this.running) {
-                this.polling = window.setTimeout(this.fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);
+                this.polling = window.setTimeout(this.fetchNewDataOnTimer, (waitingDelayMs > 0)?waitingDelayMs:0);
             }
         },
         fetchError(error) {
@@ -38,16 +40,21 @@ const app = Vue.createApp({
             console.log("ERROR: " + error);
             // Also schedule next call in case of error
             var waitingDelayMs = 1000 * this.refreshSeconds - (new Date() - this.fetchStartMs);
-            this.polling = window.setTimeout(this.fetchNewData, (waitingDelayMs > 0)?waitingDelayMs:0);
+            this.polling = window.setTimeout(this.fetchNewDataOnTimer, (waitingDelayMs > 0)?waitingDelayMs:0);
         },
-        fetchNewData() {
+        fetchNewDataOnTimer() {
             if (!this.running) {
                 return;
             }
+            this.endTime = moment(new Date()).format('YYYY-MM-DDTHH:mm');
+            this.fetchNewData();
+        },
+        fetchNewData() {
             this.fetchStartMs = Date.now();
 
             var secondsToFetch = Math.floor(parseFloat(document.getElementById("hoursToShow").value) * 3600);
-            var uri = "/sensorData?maxAgeSeconds=" + secondsToFetch;  // 24 hours
+            var endTime = this.end_time.getTime()/1000;
+            var uri = "/sensorData?maxAgeSeconds=" + secondsToFetch + '&endTime=' + endTime;  // 24 hours
             axios.
                 get(uri).
                 then(response => this.gotNewData(response.data)).
@@ -55,6 +62,16 @@ const app = Vue.createApp({
         },
         onPauseResume() {
             this.running = !this.running;
+            this.endTime = moment(new Date()).format('YYYY-MM-DDTHH:mm');
+            this.fetchNewData();
+        }
+    },
+    computed: {
+        end_time() {
+            if (this.running) {
+                return new Date();
+            }
+            return new Date(this.endTime);
         }
     },
     mounted () {

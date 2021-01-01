@@ -37,8 +37,11 @@ class ReportServer(object):
             return webPage.read()
 
     @cherrypy.expose    # TODO: This will be replaced by a rest server, but we don't know what that looks like yet
-    def sensorData(self, maxAgeSeconds=-1):
-        maxAgeSeconds = float(maxAgeSeconds)
+    def sensorData(self, maxAgeSeconds=None, endTime=None):
+        if maxAgeSeconds is not None:
+            maxAgeSeconds = float(maxAgeSeconds)
+        if endTime is not None:
+            endTime = float(endTime)
         map = {}
         with StationDatabase() as db:
             stations = db.stations
@@ -48,15 +51,15 @@ class ReportServer(object):
                     dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
                     map[stationId].append(dataPoint)
 
-            dataPoints = stations[1].dataPoints(maxAgeSeconds).copy()
+            dataPoints = stations[1].dataPoints(maxAgeSeconds=maxAgeSeconds, endTime=endTime).copy()
             maxValue = max(dataPoint['temperature'] for dataPoint in dataPoints)
             minValue = min(dataPoint['temperature'] for dataPoint in dataPoints)
 
-            map[3] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds)
+            map[3] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds, endTime)
         
         return json.dumps(map)
 
-    def _calculateThermostatState(self, ventMonitorData, onValue, offValue, maxAgeSeconds):
+    def _calculateThermostatState(self, ventMonitorData, onValue, offValue, maxAgeSeconds, endTime):
         # TODO: This might need some addition debouncing/filtering. Only time will tell how accurate it is.
         def getItem(item):
             return item['temperature']
@@ -66,7 +69,7 @@ class ReportServer(object):
             item = oldItem.copy()
             item['temperature'] = value
             return item
-        data = ventMonitorData.dataPoints(maxAgeSeconds).copy()
+        data = ventMonitorData.dataPoints(maxAgeSeconds=maxAgeSeconds, endTime=endTime).copy()
 
         for dataPoint in data:
             dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))

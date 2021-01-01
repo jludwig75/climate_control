@@ -17,16 +17,21 @@
           <div id="config">
               <span class="left">Max hours to show:&nbsp;</span>
               <input v-model.number="hoursToShow" id="hoursToShow" type="number" min="1" max="24" step="0.5" size="4" class="left" v-on:change="timeSpanChanged"/>
-              <span class="left">&nbsp;&nbsp;&nbsp;Refresh rate (seconds):&nbsp;</span>
+              <span class="left">&nbsp;&nbsp;&nbsp;Refresh rate:&nbsp;</span>
               <input v-model.number="refreshSeconds" id="refreshSeconds" type="number" min="10" max="60" step="5" size="4" class="left"/>
-              <!-- <span class="left">&nbsp;ms&nbsp;</span>
-              <input id="periodRange" type="range"  min="0" max="10000" value="1000" step="100" /> -->
+              <span class="left">&nbsp;seconds&nbsp;&nbsp;&nbsp;</span>
+              <!-- <input id="endTime" type="range"  min="0" max="10000" value="1000" step="100" /> -->
+              <label for="endTime">End Time:&nbsp;</label>
+              <input :disabled="running" v-model="endTime" id="endTime" type="datetime-local" v-on:change="timeSpanChanged"/>
+              &nbsp;&nbsp;&nbsp;
               <button id="startPauseButton" v-on:click="onPauseResume">{{ (running ? 'Pause' : 'Resume') }}</button>
           </div>
           <div id="charts">
-              <data-plot :data_point="'temperature'" v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
-              <data-plot :data_point="'humidity'" v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
-              <data-plot :data_point="'vcc'" v-if="sensor_data != null" :sensor_data="sensor_data" :key="sensor_data"></data-plot>
+              <data-plot v-for="plotType in plotTypes"
+                    :data_point="plotType"
+                    v-if="sensor_data != null"
+                    :sensor_data="sensor_data"
+                    :key="sensor_data"></data-plot>
           </div>
         </div>
         <script src="/main.js"></script>
@@ -39,11 +44,11 @@
   // EVENT HANDLERS
 
   // Keep range slider and text input in sync
-//   document.getElementById('periodRange').addEventListener('input', function (e) {
+//   document.getElementById('endTime').addEventListener('input', function (e) {
 //     document.getElementById('refreshSeconds').value = e.target.value;
 //   });
 //   document.getElementById('refreshSeconds').addEventListener('input', function (e) {
-//     document.getElementById('periodRange').value = e.target.value;
+//     document.getElementById('endTime').value = e.target.value;
 //   });      
         </script>
     </body>
