@@ -65,14 +65,14 @@ const app = Vue.createApp({
             this.endTime = moment(new Date()).format('YYYY-MM-DDTHH:mm');
             this.fetchNewData();
         },
-        adjustEndTime(days)
+        adjustEndTime(hours)
         {
             if (this.running) {
                 // The button should be disabled anyway.
                 return;
             }
             var newTime = this.end_time;
-            newTime.setDate(newTime.getDate() + days);
+            newTime.setHours(newTime.getHours() + hours);
             var now = new Date();
             if (newTime > now) {
                 newTime = now;

@@ -31,13 +31,13 @@
                     <label for="endTime">End Time:</label>
                 </div>
                 <div class="left">
-                    <button :disabled="running" v-on:click="adjustEndTime(-1)">&lt;&lt; 24hr</button>
+                    <button :disabled="running" v-on:click="adjustEndTime(-hoursToShow)">&lt;&lt; {{ hoursToShow }}hr</button>
                 </div>
                 <div class="left">
                     <input :disabled="running" v-model="endTime" id="endTime" type="datetime-local" v-on:change="timeSpanChanged"/>
                 </div>
                 <div class="left">
-                    <button :disabled="running" v-on:click="adjustEndTime(1)">24hr &gt;&gt;</button>
+                    <button :disabled="running" v-on:click="adjustEndTime(hoursToShow)">{{ hoursToShow }}hr &gt;&gt;</button>
                 </div>
           </div>
           <div id="charts">
