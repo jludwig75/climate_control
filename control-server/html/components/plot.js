@@ -5,9 +5,8 @@ app.component('data-plot', {
 <div class="plot-div">
     <div class="chart-heading">
         <h3>{{ chart_title }}</h3>
-        Legend:&nbsp;
         <span v-for="station in stations" :style="{ color: station.color}">
-            {{ station.name }}&nbsp;&nbsp;
+            {{ station.name }}<span v-if="station[data_point] != null">: {{ station[data_point] }}{{ dataPointUnits[data_point] }}</span>&nbsp;&nbsp;&nbsp;
         </span>
     </div>
     <div class="chart-container" style="position: relative; height:75%;">
@@ -50,7 +49,12 @@ app.component('data-plot', {
                 '#000075',
                 '#808080'
             ],
-            stations: []
+            stations: [],
+            dataPointUnits: {
+                'temperature': '\xb0F',
+                'humidity': '%',
+                'vcc': ' volts'
+            }
         }
     },
     methods: {
@@ -102,7 +106,11 @@ app.component('data-plot', {
                 if (this.sensor_data.hasOwnProperty(stationId)) {
                     stationId = parseInt(stationId);
                     sensorData = this.sensor_data[stationId]
-                    var dataSet = this.getDataSet(stationId);
+                    var lastDataPoint = {'temperature': null, 'humidity': null, 'vcc': null};
+                    if (sensorData.length > 0) {
+                        lastDataPoint = sensorData[sensorData.length - 1];
+                    }
+                    var dataSet = this.getDataSet(stationId, lastDataPoint);
                     if (dataSet != null) {
                         dataSet.data = []
                         for (var i = 0; i < sensorData.length; i++) {
@@ -117,16 +125,16 @@ app.component('data-plot', {
     
             this.sensorDataChart.update();
         },
-        getDataSet(stationId) {
+        getDataSet(stationId, lastDataPoint) {
             for (dataSet of this.sensorDataChart.data.datasets) {
                 if (dataSet.stationId == stationId) {
                     return dataSet;
                 }
             }
 
-            return this.addDataSet(stationId);
+            return this.addDataSet(stationId, lastDataPoint);
         },
-        addDataSet(stationId) {
+        addDataSet(stationId, lastDataPoint) {
             var newIndex = this.sensorDataChart.data.datasets.length;
             dataSet = {
                 label: 'Station ' + stationId,
@@ -138,7 +146,13 @@ app.component('data-plot', {
                 stationId: stationId
             }
             this.sensorDataChart.data.datasets.push(dataSet);
-            this.stations.push({'name': dataSet.label, 'color': dataSet.borderColor});
+            this.stations.push({
+                                'name': dataSet.label,
+                                'color': dataSet.borderColor,
+                                'temperature': lastDataPoint['temperature'],
+                                'humidity': lastDataPoint['humidity'],
+                                'vcc': lastDataPoint['vcc']
+                               });
             return this.sensorDataChart.data.datasets[newIndex];
         }
     },
