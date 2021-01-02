@@ -18,6 +18,7 @@ body {
 
 .left {
     float:left;
+    margin-right: 5px;
 }
 
 #charts {
@@ -35,4 +36,9 @@ h3 {
 
 .chart-heading {
     padding: 10px;
+}
+
+label {
+    display: inline-block;
+    float: left;
 }

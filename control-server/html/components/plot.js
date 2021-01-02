@@ -82,6 +82,7 @@ app.component('data-plot', {
             //                    "1": [{"time": 1608415319, "temperature": 70, "humidity": 41},
             //                          {"time": 1608415379, "temperature": 69, "humidity": 42}]}
    
+            this.sensorDataChart.data.datasets = [];
             var maxSamples = this.hoursToShow * 60;
     
             var nowSec = Math.round(Date.now() / 1000);

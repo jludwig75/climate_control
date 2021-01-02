@@ -47,15 +47,16 @@ class ReportServer(object):
             stations = db.stations
             for stationId, station in stations.items():
                 map[stationId] = []
-                for dataPoint in station.dataPoints(maxAgeSeconds):
+                for dataPoint in station.dataPoints(maxAgeSeconds=maxAgeSeconds, endTime=endTime):
                     dataPoint['time'] = int(time.mktime(dataPoint['time'].timetuple()))
                     map[stationId].append(dataPoint)
 
             dataPoints = stations[1].dataPoints(maxAgeSeconds=maxAgeSeconds, endTime=endTime).copy()
-            maxValue = max(dataPoint['temperature'] for dataPoint in dataPoints)
-            minValue = min(dataPoint['temperature'] for dataPoint in dataPoints)
+            if len(dataPoints) >= 10:
+                maxValue = max(dataPoint['temperature'] for dataPoint in dataPoints)
+                minValue = min(dataPoint['temperature'] for dataPoint in dataPoints)
 
-            map[3] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds, endTime)
+                map[3] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds, endTime)
         
         return json.dumps(map)
 
