@@ -39,6 +39,9 @@
                 <div class="left">
                     <button :disabled="running" v-on:click="adjustEndTime(hoursToShow)">{{ hoursToShow }}hr &gt;&gt;</button>
                 </div>
+                <div class="left">
+                    <button :disabled="running" v-on:click="adjustEndTimeToNow">Now</button>
+                </div>
           </div>
           <div id="charts">
               <data-plot v-for="plotType in plotTypes"
