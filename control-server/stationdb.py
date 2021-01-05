@@ -29,15 +29,17 @@ CREATE TABLE sensor_data (
 """
 
 def _timeToTimeStamp(t):
-    return datetime.fromtimestamp(t).strftime('%Y-%m-%d %H:%M:%S')
+    if not isinstance(t, datetime):
+        t = datetime.fromtimestamp(t)
+    return t.strftime('%Y-%m-%d %H:%M:%S')
 
 class StationDatabase:
     @staticmethod
-    def _createTables():
+    def _createTables(hostName):
         conn = mariadb.connect(
                 user='climate',
                 password='Redhorn!1',
-                host='localhost',
+                host=hostName,
                 database='climate'
             )
 
@@ -54,12 +56,12 @@ class StationDatabase:
                 cursor.execute(_CREATE_SENSOR_DATA_SQL)
 
     @staticmethod
-    def createDabase():
+    def createDabase(hostName='localhost'):
         """ Create database and tables if they do not exist. Does nothing if they already exist """
         conn = mariadb.connect(
                 user='climate',
                 password='Redhorn!1',
-                host='localhost'
+                host=hostName
             )
 
         with conn.cursor() as cursor:
@@ -73,13 +75,14 @@ class StationDatabase:
             if not dbExists:
                 cursor.execute('CREATE DATABASE climate')
 
-        StationDatabase._createTables()
+        StationDatabase._createTables(hostName)
 
-    def __init__(self):
+    def __init__(self, hostName='localhost'):
+        self._hostName = hostName
         self._conn = mariadb.connect(
                 user='climate',
                 password='Redhorn!1',
-                host='localhost',
+                host=self._hostName,
                 database='climate'
             )
 
@@ -124,6 +127,7 @@ class StationDatabase:
             if maxAgeSeconds is not None:
                 oldestTime = end_time - maxAgeSeconds
                 query += f" AND time >= '{_timeToTimeStamp(oldestTime)}'"
+            query += " ORDER BY time"
             cursor.execute(query)
             return [self._rowToDataPoints(row) for row in cursor]
         
@@ -131,7 +135,13 @@ class StationDatabase:
             """ Add datapoint for station """
             dataPoint['time'] = _timeToTimeStamp(dataPoint['time'])
             cursor = self._conn.cursor()
-            cursor.execute(f"INSERT INTO sensor_data (station_id, time, temperature, humidity, vcc) VALUES ({self._id}, '{dataPoint['time']}', {dataPoint['temperature']}, {dataPoint['humidity']}, {dataPoint['vcc']})")
+            fieldList = 'station_id, time, temperature, humidity'
+            values = [str(self._id), f"'{dataPoint['time']}'", str(dataPoint['temperature']), str(dataPoint['humidity'])]
+            if dataPoint['vcc'] is not None:
+                fieldList += ', vcc'
+                values.append(str(dataPoint['vcc']))
+            query = f"INSERT INTO sensor_data ({fieldList}) VALUES ({','.join(values)})"
+            cursor.execute(query)
             self._conn.commit()
         
         def clearDataPoints(self):
