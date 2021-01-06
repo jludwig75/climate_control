@@ -12,6 +12,11 @@ ADC_MODE(ADC_VCC);
 #define WIFI_PASSWORD   "SSID Password"
 #define HOST_NAME       "Desired host name"
 
+#define MQTT_SERVER     IPAddress(192,168,0,101)
+#define MQTT_PORT       1883
+#define MQTT_USERNAME   "user"
+#define MQTT_PASSWORD   "passwd"
+
 #define DHT_TYPE    DHT22
 #define DHT_PIN     2
 
