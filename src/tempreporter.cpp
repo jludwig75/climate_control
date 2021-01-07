@@ -41,7 +41,7 @@ void TemperatureReporter::sendSensorData(float temperature, int humidity, float 
         auto dataString = "{\"temperature\": " + String(temperature) +
                             ", \"humidity\": " + String(humidity) +
                             ", \"vcc\": " + String(vcc) + "}";
-        client.publish("climate/" STR(STATION_ID), dataString.c_str(), true);
+        client.publish("climate/" STR(STATION_ID) "/sensorData", dataString.c_str(), true);
     }
 }
 

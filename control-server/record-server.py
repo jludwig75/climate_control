@@ -41,16 +41,17 @@ class DataRecorder:
         if ret is None:
             print(f'Failed to parse message {message}')
             return
-        stationId, payloadData = ret
-        print(f'Received data from station {stationId}: {payloadData}')
-        self._postData(stationId, payloadData)
+        stationId, messageType, payloadData = ret
+        print(f'Received data from station {stationId}: {messageType} => {payloadData}')
+        if messageType == 'sensorData':
+            self._postData(stationId, payloadData)
 
     def _parseMessage(self, message):
         topicParts = message.topic.split("/")
-        if len(topicParts) != 2:
+        if len(topicParts) != 3:
             print(f'Message topic parse error: {message.topic}')
             return None
-        baseTopic, stationId = topicParts
+        baseTopic, stationId, messageType = topicParts
         if baseTopic != 'climate':
             print(f'Message topic unexpected parse error: {message.topic}')
             return None
@@ -59,12 +60,14 @@ class DataRecorder:
         except Exception as e:
             print(f'Exception parsing stationid {stationId}: {e}')
             return None
+        if messageType != 'sensorData':
+            return stationId, messageType, None
         try:
             payloadData = json.loads(message.payload.decode('utf-8'))
         except:
             print(f'Exception parsing message payload {message.payload}: {e}')
             return None
-        return (stationId, payloadData)
+        return (stationId, messageType, payloadData)
 
     def _postData(self, stationId, payloadData):
         print(f'Posting data from station {stationId} to database: {payloadData}')
