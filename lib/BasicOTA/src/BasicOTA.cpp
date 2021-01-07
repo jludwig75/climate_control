@@ -3,13 +3,14 @@
 #include <ArduinoOTA.h>
 
 
-void ota_setup(const char* hostName, const char* password)
+void ota_setup(const char* hostName, const char* password, std::function<void(void)> onOTAStart)
 {
     ArduinoOTA.setHostname(hostName);
     ArduinoOTA.setPassword(password);
 
-    ArduinoOTA.onStart([]() {
+    ArduinoOTA.onStart([onOTAStart]() {
         Serial.println("OTA Start");
+        onOTAStart();
     });
     ArduinoOTA.onEnd([]() {
         Serial.println("\nOTA End");

@@ -5,6 +5,8 @@
 #include <WiFiClient.h>
 
 #include "config.h" // <= This file is not part of the repo code. You must add it. See above. ^^^
+#include "mqttclient.h"
+
 
 static bool updateRequested()
 {
@@ -33,7 +35,7 @@ static bool updateRequested()
 static bool otaInitialized = false;
 static unsigned long lastUpdateCheck = 0;
 
-bool checkForUpdate()
+bool checkForUpdate(MqttClient& mqttClient)
 {
     auto t = millis();
     if (lastUpdateCheck == 0 || (t - lastUpdateCheck) >= 30 * 1000)
@@ -41,13 +43,21 @@ bool checkForUpdate()
         lastUpdateCheck = t;
         if (!updateRequested())
         {
+            mqttClient.sendWaitingForUpdate(false);
+            Serial.println("Disconnecting mqtt client...");
+            mqttClient.disconnect();
             return false;
         }
 
         if (!otaInitialized)
         {
             Serial.println("Initializing OTA code");
-            ota_setup(HOST_NAME, OTA_PASSWORD);
+            ota_setup(HOST_NAME, OTA_PASSWORD, [&mqttClient]{
+                mqttClient.sendWaitingForUpdate(false);
+                Serial.println("Disconnecting mqtt client...");
+                mqttClient.disconnect();
+            });
+            mqttClient.sendWaitingForUpdate(true);
             otaInitialized = true;
         }
     }

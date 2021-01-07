@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <BasicWifi.h>
+#include "mqttclient.h"
 #include "tempreporter.h"
 #include "update.h"
 
@@ -29,7 +30,9 @@ ADC_MODE(ADC_VCC);
 
 const unsigned long report_interval_ms = REPORT_INTERVAL_MINUTES * 60 * 1000;              // interval at which to read sensor in ms
 
-TemperatureReporter reporter(DHT_PIN, DHT_TYPE);
+MqttClient mqttClient(HOST_NAME, MQTT_SERVER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD);
+
+TemperatureReporter reporter(DHT_PIN, DHT_TYPE, mqttClient);
 
 void blinkLed(int blinkCount, int onTimeMs, int offTimeMs)
 {
@@ -46,6 +49,28 @@ void blinkLed(int blinkCount, int onTimeMs, int offTimeMs)
     }
 }
 
+
+static bool runMain()
+{
+    if (!wifi_setup(HOST_NAME, WIFI_SSID, WIFI_PASSWORD, 10 * 1000))    // 10 seconde timeout
+    {
+        Serial.println("Failed to setup WiFi");
+        return false;
+    }
+
+    Serial.println("Waiting for DHT...");
+    delay(500);    // TODO: Might not need it with the WiFi conneciton time
+
+    if (!mqttClient.connect())
+    {
+        Serial.println("Failed to connect to MQTT broker");
+        return false;
+    }
+
+    reporter.report();
+    return true;
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -54,14 +79,7 @@ void setup()
 
     reporter.begin();    // initialize temperature reporter first so the HW has time to initialize
 
-    if (wifi_setup(HOST_NAME, WIFI_SSID, WIFI_PASSWORD, 10 * 1000))    // 10 seconde timeout
-    {
-        Serial.println("Waiting for DHT...");
-        delay(500);    // TODO: Might not need it with the WiFi conneciton time
-
-        reporter.report();
-    }
-    else
+    if (!runMain())
     {
         Serial.println("Failed to initialize WiFi!");
         // blink LED several times to show an error.
@@ -71,7 +89,7 @@ void setup()
 
 void loop()
 {
-    if (!checkForUpdate())
+    if (!checkForUpdate(mqttClient))
     {
         Serial.println("Sleeping...");
         ESP.deepSleep(report_interval_ms * 1000);

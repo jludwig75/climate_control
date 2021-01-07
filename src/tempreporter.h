@@ -9,13 +9,16 @@
 #define VCC_VAR_NAME        "vcc"
 
 
+class MqttClient;
+
+
 class TemperatureReporter
 {
     public:
-        TemperatureReporter(uint8_t dht_pin, uint8_t dht_type);
+        TemperatureReporter(uint8_t dht_pin, uint8_t dht_type, MqttClient& mqttClient);
         void begin();
         void report();
     private:
-        void sendSensorData(float temperature, int humidity, float vcc);
         DHT _dht;
+        MqttClient& _mqttClient;
 };
