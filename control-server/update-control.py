@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
 import paho.mqtt.subscribe as subscribe
+import time
 
 
 class UpdateController:
@@ -10,16 +11,61 @@ class UpdateController:
         self._userName = userName
         self._password = password
         self._stationsWaitingForUpdate = set()
+        self._connected = False
 
-    def run(self):
-        client = mqtt.Client(self._clientId)
-        client.username_pw_set(self._userName, self._password)
-        client._on_connect = self._on_connect
-        client._on_message = self._on_message
+    def monitor(self):
+        self._start()
+        self._client.loop_forever()
 
-        client.connect(self._mqttServer)
+# TODO: This needs to be event driven. Instead of polling, provide onStationReadyForUpdate and onStationNotReadyForUpdate callbacks.
+# then proceed when all are in the requested state
+    def requestUpdate(self, stationIds):
+        self._start()
+        self._client.loop_start()
+        try:
+            print('Waiting for connection')
+            while not self._connected:
+                time.sleep(0.1)
+            print('Connected to MQTT broker')
+            try:
+                print(f'Requesting stations {stationIds} wait for update')
+                for stationId in stationIds:
+                    self._requestUpdate(stationId)
+                
+                print(f'Waiting for stations {stationIds} to wait to update...')
+                for stationId in stationIds:
+                    while not stationId in self._stationsWaitingForUpdate:
+                        print(f'Stations ready for uppdate: {self._stationsWaitingForUpdate}')
+                        time.sleep(3)
+                
+                print('All stations are ready for update. Enter something when update complete')
+                input()
 
-        client.loop_forever()
+                print(f'Waiting for stations {stationIds} to start update...')
+                for stationId in stationIds:
+                    while stationId in self._stationsWaitingForUpdate:
+                        print(f'Stations ready for uppdate: {self._stationsWaitingForUpdate}')
+                        time.sleep(3)
+
+            finally:
+                for stationId in stationIds:
+                    self._releaseUpdate(stationId)
+        finally:
+            self._client.loop_stop()
+
+
+    def _requestUpdate(self, stationId):
+        self._client.publish(f'climate/{stationId}/waitForUpdate', 'yes', qos=1, retain=True)
+
+    def _releaseUpdate(self, stationId):
+        self._client.publish(f'climate/{stationId}/waitForUpdate', 'no', qos=1, retain=True)
+
+    def _start(self):
+        self._client = mqtt.Client(self._clientId)
+        self._client.username_pw_set(self._userName, self._password)
+        self._client._on_connect = self._on_connect
+        self._client._on_message = self._on_message
+        self._client.connect(self._mqttServer)
     
     def _on_connect(self, client, userdata, flags, rc):
         print(f'_on_connect: {userdata} {flags} {rc}')
@@ -27,8 +73,10 @@ class UpdateController:
             print('Successfully connected to broker')
             print('Subscribing to climate topic')
             client.subscribe('climate/+/waitingForUpdate', qos=1)
+            self._connected = True
         else:
             print(f'Error {rc} connecting to broker')
+            self._connected = False
 
     def _on_message(self, client, userdata, message):
         print(f'Received message: retain={message.retain} timestamp={message.timestamp} topic="{message.topic}" payload="{message.payload}"')
@@ -75,4 +123,5 @@ class UpdateController:
 
 if __name__ == "__main__":
     recorder = UpdateController(mqttServer='172.18.1.101', userName='climate', password='Klima')
-    recorder.run()
+    # recorder.requestUpdate([1, 2])
+    recorder.monitor()
