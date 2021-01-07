@@ -5,6 +5,10 @@ import time
 
 
 class UpdateController:
+    STATE_REQUESTING_STATIONS_TO_WAIT = 0
+    STATE_WAIT_FOR_STATIONS_READY = 1
+    STATE_WAIT_FOR_UPDATES_TO_START = 2
+    STATE_STATIONS_RELEASED = 3
     def __init__(self, mqttServer, userName, password, clientInstance = 0):
         self._clientInstance = clientInstance
         self._mqttServer = mqttServer
@@ -12,6 +16,9 @@ class UpdateController:
         self._password = password
         self._stationsWaitingForUpdate = set()
         self._connected = False
+        self._stationsRequestedForUpdate = []
+        self._updateDone = False
+        self._state = None
 
     def monitor(self):
         self._start()
@@ -19,7 +26,30 @@ class UpdateController:
 
 # TODO: This needs to be event driven. Instead of polling, provide onStationReadyForUpdate and onStationNotReadyForUpdate callbacks.
 # then proceed when all are in the requested state
+    def _allStationsReadyForUpdate(self):
+        print('All stations are ready for update.')
+        print('Waiting for stations to start update...')
+        self._state = UpdateController.STATE_WAIT_FOR_UPDATES_TO_START
+
+    def _processState(self):
+        if self._state == UpdateController.STATE_WAIT_FOR_STATIONS_READY:
+            for station in self._stationsRequestedForUpdate:
+                if not station in self._stationsWaitingForUpdate:
+                    return
+            print('All stations are ready for udate')
+            print(f'Waiting for stations {self._stationsRequestedForUpdate} to start update...')
+            self._allStationsReadyForUpdate()
+        if self._state == UpdateController.STATE_WAIT_FOR_UPDATES_TO_START:
+            for station in self._stationsRequestedForUpdate:
+                if station in self._stationsWaitingForUpdate:
+                    return
+            print(f'All updates started on stations {self._stationsRequestedForUpdate}')
+            self._releaseStations()
+            self._updateDone = True
+
     def requestUpdate(self, stationIds):
+        self._stationsRequestedForUpdate = stationIds
+        self._state = UpdateController.STATE_REQUESTING_STATIONS_TO_WAIT
         self._start()
         self._client.loop_start()
         try:
@@ -28,36 +58,33 @@ class UpdateController:
                 time.sleep(0.1)
             print('Connected to MQTT broker')
             try:
-                print(f'Requesting stations {stationIds} wait for update')
-                for stationId in stationIds:
+                print(f'Requesting stations {self._stationsRequestedForUpdate} wait for update')
+                for stationId in self._stationsRequestedForUpdate:
                     self._requestUpdate(stationId)
-                
-                print(f'Waiting for stations {stationIds} to wait to update...')
-                for stationId in stationIds:
-                    while not stationId in self._stationsWaitingForUpdate:
-                        print(f'Stations ready for uppdate: {self._stationsWaitingForUpdate}')
-                        time.sleep(3)
-                
-                print('All stations are ready for update. Enter something when update complete')
-                input()
-
-                print(f'Waiting for stations {stationIds} to start update...')
-                for stationId in stationIds:
-                    while stationId in self._stationsWaitingForUpdate:
-                        print(f'Stations ready for uppdate: {self._stationsWaitingForUpdate}')
-                        time.sleep(3)
+               
+                print(f'Waiting for stations {self._stationsRequestedForUpdate} to wait for update...')
+                self._state = UpdateController.STATE_WAIT_FOR_STATIONS_READY
+                while not self._updateDone:
+                    time.sleep(3)
 
             finally:
-                for stationId in stationIds:
-                    self._releaseUpdate(stationId)
+                self._releaseStations()
         finally:
             self._client.loop_stop()
 
+    def _releaseStations(self):
+        if self._state != UpdateController.STATE_STATIONS_RELEASED:
+            for stationId in self._stationsRequestedForUpdate:
+                self._releaseUpdate(stationId)
+            print(f'All stations {self._stationsRequestedForUpdate} released from updates')
+            self._state = UpdateController.STATE_STATIONS_RELEASED
 
     def _requestUpdate(self, stationId):
+        print(f'Requesting station {stationId} to wait for update')
         self._client.publish(f'climate/{stationId}/waitForUpdate', 'yes', qos=1, retain=True)
 
     def _releaseUpdate(self, stationId):
+        print(f'Releasing station {stationId}')
         self._client.publish(f'climate/{stationId}/waitForUpdate', 'no', qos=1, retain=True)
 
     def _start(self):
@@ -89,9 +116,12 @@ class UpdateController:
         if messageType == 'waitingForUpdate':
             print(f'Station {stationId} is waiting for update: {payloadData}')
             if payloadData.lower() == 'yes':
-                self._stationsWaitingForUpdate.add(stationId)
+                if self._state is None or self._state < UpdateController.STATE_WAIT_FOR_UPDATES_TO_START:
+                    self._stationsWaitingForUpdate.add(stationId)
+                    self._processState()
             elif stationId in self._stationsWaitingForUpdate:
                 self._stationsWaitingForUpdate.remove(stationId)
+                self._processState()
             print(f'Stations waiting for update: {self._stationsWaitingForUpdate}')
 
     def _parseMessage(self, message):
@@ -123,5 +153,5 @@ class UpdateController:
 
 if __name__ == "__main__":
     recorder = UpdateController(mqttServer='172.18.1.101', userName='climate', password='Klima')
-    # recorder.requestUpdate([1, 2])
-    recorder.monitor()
+    recorder.requestUpdate([1, 2])
+    # recorder.monitor()
