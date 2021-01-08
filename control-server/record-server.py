@@ -64,7 +64,7 @@ class DataRecorder:
             return stationId, messageType, None
         try:
             payloadData = json.loads(message.payload.decode('utf-8'))
-        except:
+        except Exception as e:
             print(f'Exception parsing message payload {message.payload}: {e}')
             return None
         return (stationId, messageType, payloadData)

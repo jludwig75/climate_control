@@ -119,6 +119,7 @@ class StationUpdater:
         try:
             self._mqttClient.registerStateChangeCallback(self._stationId, self._onUpdateStateChange)
             self._mqttClient.requestUpdate(self._stationId)
+            print(f'Waiting for station {self._stationId} to prepare for update...')
             while self._state != StationUpdater.COMPLETE:
                 time.sleep(1)
         finally:

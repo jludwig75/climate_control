@@ -13,10 +13,24 @@ public:
                 uint16_t port,
                 const char *user,
                 const char *pass);
+    ~MqttClient();
     bool connect();
     void disconnect();
     void sendSensorData(float temperature, int humidity, float vcc);
-    void sendWaitingForUpdate(bool waiting);
+    enum UpdateState
+    {
+        UNKNOWN,
+        UPDATE_STATE_NOT_WAITING,
+        UPDATE_STATE_WAITING,
+        UPDATE_STATE_UPDATING,
+        UPDATE_STATE_UPDATE_COMPLETE
+    };
+    bool waitForUpdate() const;
+    void sendUpdateState(UpdateState state);
+    void loop();
+protected:
+    static void callback(char* topic, byte* payload, unsigned int length);
+    void onMessage(char* topic, byte* payload, unsigned int length);
 private:
     const char* _clientId;
     IPAddress _ip;
@@ -25,4 +39,5 @@ private:
     const char *_pass;
     WiFiClient _wifiClient;
     PubSubClient _client;
+    bool _waitForUpdate;
 };

@@ -71,6 +71,8 @@ static bool runMain()
     return true;
 }
 
+unsigned long startTime = 0;
+
 void setup()
 {
     Serial.begin(115200);
@@ -85,10 +87,18 @@ void setup()
         // blink LED several times to show an error.
         blinkLed(20, 100, 400); // 20 0.5 second intervals = 10 seconds duration. On 20% of interval. Should look like an error. :)
     }
+
+    startTime = millis();
 }
 
 void loop()
 {
+    mqttClient.loop();
+    if (millis() - startTime < 1000)
+    {
+        // Give the MQTT client time to receive any retained message
+        return;
+    }
     if (!checkForUpdate(mqttClient))
     {
         Serial.println("Sleeping...");
