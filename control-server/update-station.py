@@ -128,7 +128,7 @@ class StationUpdater:
         # print(f'on-state-change[{self._stationId}]: StationState:[{state}] UpdaterState:[{self._state}]')
         if self._state == StationUpdater.WAITING_FOR_WAITING_FOR_UPDATE:
             if state == MqttClient.UPDATE_STATE_WAITING:
-                print(f'Station {self._stationId} is waiting for an update. Start the update now')
+                print(f'Station {self._stationId} is waiting for an update. *** Start the update now! ***')
                 self._state = StationUpdater.WAITING_FOR_UPDATE_TO_START
         elif self._state == StationUpdater.WAITING_FOR_UPDATE_TO_START:
             if state == MqttClient.UPDATE_STATE_UPDATING:
