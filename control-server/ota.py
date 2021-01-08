@@ -26,9 +26,11 @@ class OTA:
                 print('OTA Rebooting ESP')
                 ESP.reboot()
 
-_ota = OTA()
+_ota = None
 
 def ota_setup(onStart, onEnd):
+    global _ota
+    _ota = OTA()
     _ota.ota_setup(onStart, onEnd)
 
 def ota_onLoop():
