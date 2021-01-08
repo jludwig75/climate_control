@@ -28,7 +28,7 @@ class DataRecorder:
         if rc == 0:
             print('Successfully connected to broker')
             print('Subscribing to climate topic')
-            client.subscribe('climate/#', qos=1)
+            client.subscribe('climate/+/sensorData', qos=1)
         else:
             print(f'Error {rc} connecting to broker')
 
@@ -42,9 +42,7 @@ class DataRecorder:
             print(f'Failed to parse message {message}')
             return
         stationId, messageType, payloadData = ret
-        print(f'Received data from station {stationId}: {messageType} => {payloadData}')
-        if messageType == 'sensorData':
-            self._postData(stationId, payloadData)
+        self._postData(stationId, payloadData)
 
     def _parseMessage(self, message):
         topicParts = message.topic.split("/")
@@ -52,7 +50,7 @@ class DataRecorder:
             print(f'Message topic parse error: {message.topic}')
             return None
         baseTopic, stationId, messageType = topicParts
-        if baseTopic != 'climate':
+        if baseTopic != 'climate' or messageType != 'sensorData':
             print(f'Message topic unexpected parse error: {message.topic}')
             return None
         try:
@@ -60,8 +58,6 @@ class DataRecorder:
         except Exception as e:
             print(f'Exception parsing stationid {stationId}: {e}')
             return None
-        if messageType != 'sensorData':
-            return stationId, messageType, None
         try:
             payloadData = json.loads(message.payload.decode('utf-8'))
         except Exception as e:
