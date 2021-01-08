@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from esp8266 import ESP, millis, delay
+from ota import ota_setup, ota_onLoop
 import paho.mqtt.client as mqtt
 import sys
 import time
@@ -24,37 +26,6 @@ Conversation:
 
 report_interval_ms = 60 * 1000
 
-def millis():
-    return int(time.time() * 1000)
-
-def delay(ms):
-    time.sleep(ms / 1000.0)
-
-class PowerException(Exception):
-    MODE_REBOOT = 0
-    MODE_DEEP_SLEEP = 1
-    def __init__(self, mode, sleepTime = None):
-        super().__init__('Mode exception')
-        self._mode = mode
-        if mode == PowerException.MODE_DEEP_SLEEP:
-            assert sleepTime is not None
-        self._sleepTime = sleepTime
-
-    @property
-    def mode(self):
-        return self._mode
-    
-    @property
-    def sleepTime(self):
-        return self._sleepTime
-
-class Esp:
-    def deepSleep(self, intervalNs):
-        raise PowerException(PowerException.MODE_DEEP_SLEEP, intervalNs / 1000)
-    def reboot(self):
-        raise PowerException(PowerException.MODE_REBOOT)
-
-ESP = Esp()
 
 class MqttClient:
     def __init__(self, clientId, ip, port, user, passwd, stationId):
@@ -142,65 +113,13 @@ class MqttClient:
         self._client.publish(f'climate/{self._stationId}/updateState', state, qos=1, retain=True)
 
 
-class OTA:
-    STATE_WIATING = 0
-    STATE_RUNNING = 1
-    STATE_COMPLETE = 2
-    def __init__(self):
-        self._startTime = millis()
-        self._state = OTA.STATE_WIATING
-
-    def ota_setup(self, onStart, onEnd):
-        self._onStart = onStart
-        self._onEnd = onEnd
-
-    def ota_onLoop(self):
-        if self._state == OTA.STATE_WIATING:
-            if millis() - self._startTime > 8 * 1000:
-                print('OTA Start')
-                self._onStart()
-                self._state = OTA.STATE_RUNNING
-        elif self._state == OTA.STATE_RUNNING:
-            if millis() - self._startTime > 23 * 1000:
-                print('OTA End')
-                self._onEnd()
-                print('OTA Rebooting ESP')
-                ESP.reboot()
-
-class Station:
-    def __init__(self, id):
-        self._id = id
-
-    def run(self):
-        while True:
-            try:
-                self._setup()
-                while True:
-                    self._loop()
-            except PowerException as e:
-                if e.mode == PowerException.MODE_DEEP_SLEEP:
-                    time.sleep(e.sleepTime / 1000.0)
-                else:
-                    time.sleep(3)
-
-    def _setup(self):
-        print('Running sketch...')
-        self._mqttClient = MqttClient(f'dummy-station-{self._id}', '172.18.1.101', 1883, 'climate', 'Klima', self._id)
-        self._ota = OTA()
+class UpdateChecker:
+    def __init__(self, mqttClient):
         self._lastUpdateCheck = 0
         self._otaInitialized = False
         self._updating = False
-        self._mqttClient.connect()
-        print('Waiting for MQTT...')
-        delay(1000) # Give MQTT a chance to connect
-        print('End setup')
-
-    def _loop(self):
-        if not self._checkForUpdate():
-            print('Sleeping...')
-            ESP.deepSleep(report_interval_ms * 1000)
-
-    def _checkForUpdate(self):
+        self._mqttClient = mqttClient
+    def checkForUpdate(self):
         t = millis()
         if self._lastUpdateCheck == 0 or t - self._lastUpdateCheck > 30 * 1000:
             self._lastUpdateCheck = t
@@ -211,12 +130,12 @@ class Station:
                 return False
             if not self._otaInitialized:
                 print('Initializing OTA code')
-                self._ota.ota_setup(self._onOtaStart, self._onOtaEnd)
+                ota_setup(self._onOtaStart, self._onOtaEnd)
                 self._mqttClient.sendUpdateState(MqttClient.UPDATE_STATE_WAITING)
                 self._otaInitialized = True
 
         if self._otaInitialized:
-            self._ota.ota_onLoop()
+            ota_onLoop()
         return True
     
     def _onOtaStart(self):
@@ -228,6 +147,25 @@ class Station:
         self._mqttClient.disconnect()
         self._updating = False
 
+
+class StationSketch:
+    def __init__(self, id):
+        self._id = id
+
+    def setup(self):
+        print('Running sketch...')
+        self._mqttClient = MqttClient(f'dummy-station-{self._id}', '172.18.1.101', 1883, 'climate', 'Klima', self._id)
+        self._update = UpdateChecker(self._mqttClient)
+        self._mqttClient.connect()
+        print('Waiting for MQTT...')
+        delay(1000) # Give MQTT a chance to connect
+        print('End setup')
+
+    def loop(self):
+        if not self._update.checkForUpdate():
+            print('Sleeping...')
+            ESP.deepSleep(report_interval_ms * 1000)
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print('Invlid command arguments expect <station_id>')
@@ -235,5 +173,5 @@ if __name__ == "__main__":
     else:
         stationId = int(sys.argv[1])
     print(f'Simulating station {stationId}...')
-    station = Station(stationId)
-    station.run()
+    stationSketch = StationSketch(stationId)
+    ESP.runSketch(stationSketch)
