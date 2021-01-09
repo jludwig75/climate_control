@@ -2,8 +2,9 @@ import paho.mqtt.client as mqtt
 
 
 class ClimateMqttClient:
-    def __init__(self, clientId, ip, port, user, passwd, subscribedMessageTypes = None, subscriptionClientId = None):
+    def __init__(self, clientId, clientType, ip, port, user, passwd, subscribedMessageTypes = None, subscriptionClientId = None):
         self._clientId = clientId
+        self._clientType = clientType
         self._mqttServer = ip
         self._port = port
         self._userName = user
@@ -39,7 +40,7 @@ class ClimateMqttClient:
                 clientIdPathPart = '+'
                 if self._subscriptionClientId is not None:
                     clientIdPathPart = str(self._subscriptionClientId)
-                subscriptionPath = f'climate/station/{clientIdPathPart}/{messageType}'
+                subscriptionPath = f'climate/{self._clientType}/{clientIdPathPart}/{messageType}'
                 print(f'Subscribing to {subscriptionPath}')
                 self._client.subscribe(subscriptionPath, qos=1)
 
@@ -59,9 +60,9 @@ class ClimateMqttClient:
         if len(topicParts) != 4:
             print(f'Message topic parse error: {message.topic}')
             return None
-        baseTopic, stationType, stationId, messageType = topicParts
+        baseTopic, clientType, stationId, messageType = topicParts
 
-        if baseTopic != 'climate' or messageType not in self._subscribedMessageTypes:
+        if baseTopic != 'climate' or clientType != self._clientType or messageType not in self._subscribedMessageTypes:
             print(f'Message type does not match subscription: {message.topic}')
             return None
 

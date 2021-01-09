@@ -7,7 +7,7 @@ import time
 
 class UpdateControlClient(ClimateMqttClient):
     def __init__(self, clientId, ip, port, user, passwd):
-        super().__init__(clientId, ip, port, user, passwd, subscribedMessageTypes=['updateState'])
+        super().__init__(clientId, 'station', ip, port, user, passwd, subscribedMessageTypes=['updateState'])
         self._waitForUpdate = False
         self._stationStates = {}
         self._stationStateChangeCallbacks = {}
