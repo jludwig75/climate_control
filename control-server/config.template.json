@@ -1,0 +1,6 @@
+{
+    "mqtt_broker": "broker host name or IP",
+    "mqtt_port": 1883,
+    "mqtt_user_name": "user name",
+    "mqtt_password": "password"
+}

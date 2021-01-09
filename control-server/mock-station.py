@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from climate.client import ClimateMqttClient
+from climate.client import ClimateMqttClient, loadClientConfig
 from climate.topics import *
 import sys
 import time
@@ -82,8 +82,9 @@ class StationSketch:
         self._id = id
 
     def setup(self):
+        cfg = loadClientConfig()
         print('Running sketch...')
-        self._mqttClient = MockStationClient(self._id, '172.18.1.101', 1883, 'climate', 'Klima')
+        self._mqttClient = MockStationClient(self._id, cfg['mqtt_broker'], cfg['mqtt_port'], cfg['mqtt_user_name'], cfg['mqtt_password'])
         self._update = UpdateChecker(self._mqttClient)
         self._mqttClient.connect()
         print('Waiting for MQTT...')

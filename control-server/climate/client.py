@@ -1,6 +1,11 @@
-import paho.mqtt.client as mqtt
 from climate.topics import *
+import json
+import paho.mqtt.client as mqtt
 
+
+def loadClientConfig():
+    with open('config.json') as f:
+        return json.loads(f.read())
 
 class ClimateMqttClient:
     def __init__(self, clientId, clientType, ip, port, user, passwd, subscribedMessageTypes = None, subscriptionClientId = None):

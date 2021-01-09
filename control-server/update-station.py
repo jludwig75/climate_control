@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from climate.client import ClimateMqttClient
+from climate.client import ClimateMqttClient, loadClientConfig
 from climate.topics import *
 import sys
 import threading
@@ -97,7 +97,8 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print('Invlid command arguments expect <station_id>')
     stationIds = [int(arg) for arg in sys.argv[1:]]
-    mqttClient = UpdateControlClient(f'station-updater-0', '172.18.1.101', 1883, 'climate', 'Klima')
+    cfg = loadClientConfig()
+    mqttClient = UpdateControlClient(f'station-updater-0', cfg['mqtt_broker'], cfg['mqtt_port'], cfg['mqtt_user_name'], cfg['mqtt_password'])
     mqttClient.connect()
     updaters = []
     threads = []
