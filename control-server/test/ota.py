@@ -1,4 +1,4 @@
-from esp8266 import ESP, millis
+from test.esp8266 import ESP, millis
 
 
 class OTA:

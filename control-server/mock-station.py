@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from esp8266 import ESP, millis, delay
-from ota import ota_setup, ota_onLoop
-import paho.mqtt.client as mqtt
+from test.esp8266 import ESP, millis, delay
+from test.ota import ota_setup, ota_onLoop
+from climate.client import ClimateMqttClient
 import sys
 import time
 
@@ -27,82 +27,27 @@ Conversation:
 report_interval_ms = 60 * 1000
 
 
-class MqttClient:
-    def __init__(self, clientId, ip, port, user, passwd, stationId):
-        self._clientId = clientId
-        self._mqttServer = ip
-        self._port = port
-        self._userName = user
-        self._password = passwd
+class MockStationClient(ClimateMqttClient):
+    def __init__(self, stationId, ip, port, user, passwd):
+        super().__init__(f'dummy-station-{stationId}', ip, port, user, passwd, subscribedMessageTypes=['waitForUpdate'], subscriptionClientId=stationId)
         self._stationId = stationId
         self._waitForUpdate = False
 
-    def connect(self):
-        print('Connecting to MQTT broker...')
-        self._client = mqtt.Client(self._clientId)
-        self._client.username_pw_set(self._userName, self._password)
-        self._client._on_connect = self._on_connect
-        self._client._on_message = self._on_message
-        self._client.connect(self._mqttServer)
-        print('Connected to MQTT broker')
-        self._client.loop_start()
+    def _onMessage(self, stationId, messageType, message):
+        assert stationId == self._stationId
+
+        # print(f'Received message: retain={message.retain} timestamp={message.timestamp} topic="{message.topic}" payload="{message.payload}"')
+        try:
+            payloadData = message.payload.decode('utf-8')
+        except Exception as e:
+            print(f'Exception parsing message payload {message.payload}: {e}')
+            return
+        print(f'Received data from station {stationId}: {messageType} => {payloadData}')
+        self._waitForUpdate = True if payloadData.lower() == 'yes' else False
 
     @property
     def waitForUpdate(self):
         return self._waitForUpdate
-
-    def _on_connect(self, client, userdata, flags, rc):
-        # print(f'_on_connect: {userdata} {flags} {rc}')
-        if rc == 0:
-            print('Successfully connected to broker')
-            print('Subscribing to climate topic')
-            self._client.subscribe('climate/+/waitForUpdate', qos=1)
-        else:
-            print(f'Error {rc} connecting to broker')
-            self._connected = False
-
-    def _on_message(self, client, userdata, message):
-        # print(f'Received message: retain={message.retain} timestamp={message.timestamp} topic="{message.topic}" payload="{message.payload}"')
-        ret = self._parseMessage(message)
-        if ret is None:
-            return
-        stationId, messageType, payloadData = ret
-        print(f'Received data from station {stationId}: {messageType} => {payloadData}')
-        self._waitForUpdate = True if payloadData.lower() == 'yes' else False
-
-    def _parseMessage(self, message):
-        topicParts = message.topic.split("/")
-        if len(topicParts) != 3:
-            print(f'Message topic parse error: {message.topic}')
-            return None
-        baseTopic, stationId, messageType = topicParts
-
-        if baseTopic != 'climate' or messageType != 'waitForUpdate':
-            print(f'Message type does not match subscription: {message.topic}')
-            return None
-
-        try:
-            stationId = int(stationId)
-        except Exception as e:
-            print(f'Exception parsing stationid {stationId}: {e}')
-            return None
-        
-        if stationId != self._stationId:
-            # print('Ignoring message not for this station')
-            return None
-
-        try:
-            payloadData = message.payload.decode('utf-8')
-        except:
-            print(f'Exception parsing message payload {message.payload}: {e}')
-            return None
-        return (stationId, messageType, payloadData)
-
-    def disconnect(self):
-        print('Disconnecting from MQTT broker')
-        self._client.disconnect()
-        print('Disconnected from MQTT broker')
-        self._client.loop_stop()
 
     UPDATE_STATE_NOT_WAITING = 'NotWaiting'
     UPDATE_STATE_WAITING = 'Waiting'
@@ -124,14 +69,14 @@ class UpdateChecker:
         if self._lastUpdateCheck == 0 or t - self._lastUpdateCheck > 30 * 1000:
             self._lastUpdateCheck = t
             if not self._updating and not self._mqttClient.waitForUpdate:
-                self._mqttClient.sendUpdateState(MqttClient.UPDATE_STATE_NOT_WAITING)
+                self._mqttClient.sendUpdateState(MockStationClient.UPDATE_STATE_NOT_WAITING)
                 print("Disconnecting mqtt client...")
                 self._mqttClient.disconnect()
                 return False
             if not self._otaInitialized:
                 print('Initializing OTA code')
                 ota_setup(self._onOtaStart, self._onOtaEnd)
-                self._mqttClient.sendUpdateState(MqttClient.UPDATE_STATE_WAITING)
+                self._mqttClient.sendUpdateState(MockStationClient.UPDATE_STATE_WAITING)
                 self._otaInitialized = True
 
         if self._otaInitialized:
@@ -140,10 +85,10 @@ class UpdateChecker:
     
     def _onOtaStart(self):
         self._updating = True
-        self._mqttClient.sendUpdateState(MqttClient.UPDATE_STATE_UPDATING)
+        self._mqttClient.sendUpdateState(MockStationClient.UPDATE_STATE_UPDATING)
     
     def _onOtaEnd(self):
-        self._mqttClient.sendUpdateState(MqttClient.UPDATE_STATE_UPDATE_COMPLETE)
+        self._mqttClient.sendUpdateState(MockStationClient.UPDATE_STATE_UPDATE_COMPLETE)
         self._mqttClient.disconnect()
         self._updating = False
 
@@ -154,7 +99,7 @@ class StationSketch:
 
     def setup(self):
         print('Running sketch...')
-        self._mqttClient = MqttClient(f'dummy-station-{self._id}', '172.18.1.101', 1883, 'climate', 'Klima', self._id)
+        self._mqttClient = MockStationClient(self._id, '172.18.1.101', 1883, 'climate', 'Klima')
         self._update = UpdateChecker(self._mqttClient)
         self._mqttClient.connect()
         print('Waiting for MQTT...')
