@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from climate.client import ClimateMqttClient
+from climate.topics import *
 import sys
 import threading
 import time
@@ -7,7 +8,7 @@ import time
 
 class UpdateControlClient(ClimateMqttClient):
     def __init__(self, clientId, ip, port, user, passwd):
-        super().__init__(clientId, 'station', ip, port, user, passwd, subscribedMessageTypes=['updateState'])
+        super().__init__(clientId, CLIENT_STATION, ip, port, user, passwd, subscribedMessageTypes=[STATION_MSG_TYPE_UPDATE_STATE])
         self._waitForUpdate = False
         self._stationStates = {}
         self._stationStateChangeCallbacks = {}
@@ -42,10 +43,10 @@ class UpdateControlClient(ClimateMqttClient):
         return self._stationStates[stationId]
 
     def requestUpdate(self, stationId):
-        self.publish(stationId, 'waitForUpdate', 'yes', qos=1, retain=True)
+        self.publish(stationId, STATION_MSG_TYPE_WAIT_FOR_UPDATE, 'yes', qos=1, retain=True)
     
     def releaseFromUpdate(self, stationId):
-        self.publish(stationId, 'waitForUpdate', 'no', qos=1, retain=True)
+        self.publish(stationId, STATION_MSG_TYPE_WAIT_FOR_UPDATE, 'no', qos=1, retain=True)
 
 
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from climate.client import ClimateMqttClient
+from climate.topics import *
 import json
 from stationdb import StationDatabase
 import time
@@ -7,7 +8,7 @@ import time
 
 class DataRecorder(ClimateMqttClient):
     def __init__(self, mqttServer, userName, password, clientInstance = 0):
-        super().__init__(f'record-server-{clientInstance}', 'station', mqttServer, 1883, userName, password, ['sensorData'])
+        super().__init__(f'record-server-{clientInstance}', CLIENT_STATION, mqttServer, 1883, userName, password, [STATION_MSG_TYPE_SENSOR_DATA])
 
     def run(self):
         self.connect(runForever=True)
