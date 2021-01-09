@@ -23,6 +23,9 @@ class HvacController(ClimateMqttClient):
     def run(self):
         self.connect(runForever=True)
     
+    def _onIinit(self):
+        self._setMode(self._mode)
+
     def _onMessage(self, stationId, messageType, message):
         if messageType == HVAC_MSG_TYPE_REQUEST_MODE:
             if stationId != self._stationId:
@@ -44,6 +47,7 @@ class HvacController(ClimateMqttClient):
     def _setMode(self, mode):
         # TODO: Apply policy checks here
         self._mode = mode
+        print(f'HVAC controller {self._stationId} mode set to {self._mode}')
         self._reportMode()
 
     def _reportMode(self):

@@ -25,7 +25,6 @@ class ClimateMqttClient:
         self._password = passwd
         self._subscribedMessageMap = subscribedMessageMap
         self._subscribedClientTypes = [k for k in subscribedMessageMap.keys()]
-        print(self._subscribedClientTypes)
         self._subscriptionClientId = subscriptionClientId
 
     def connect(self, runForever = False):
@@ -46,6 +45,7 @@ class ClimateMqttClient:
         if rc == 0:
             print('Successfully connected to broker')
             self._handleSubscriptions()
+            self._onIinit()
         else:
             print(f'Error {rc} connecting to broker')
             self._connected = False
@@ -71,6 +71,9 @@ class ClimateMqttClient:
 
     def _onMessage(self, stationId, messageType, message):
         assert False # Must be overridden by derived class
+    
+    def _onIinit(self):
+        pass # can be overridden by derived class
 
     def _parseMessage(self, message):
         topicParts = message.topic.split("/")
