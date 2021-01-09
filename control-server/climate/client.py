@@ -39,7 +39,7 @@ class ClimateMqttClient:
                 clientIdPathPart = '+'
                 if self._subscriptionClientId is not None:
                     clientIdPathPart = str(self._subscriptionClientId)
-                subscriptionPath = f'climate/{clientIdPathPart}/{messageType}'
+                subscriptionPath = f'climate/station/{clientIdPathPart}/{messageType}'
                 print(f'Subscribing to {subscriptionPath}')
                 self._client.subscribe(subscriptionPath, qos=1)
 
@@ -56,10 +56,10 @@ class ClimateMqttClient:
 
     def _parseMessage(self, message):
         topicParts = message.topic.split("/")
-        if len(topicParts) != 3:
+        if len(topicParts) != 4:
             print(f'Message topic parse error: {message.topic}')
             return None
-        baseTopic, stationId, messageType = topicParts
+        baseTopic, stationType, stationId, messageType = topicParts
 
         if baseTopic != 'climate' or messageType not in self._subscribedMessageTypes:
             print(f'Message type does not match subscription: {message.topic}')

@@ -42,10 +42,10 @@ class UpdateControlClient(ClimateMqttClient):
         return self._stationStates[stationId]
 
     def requestUpdate(self, stationId):
-        self._client.publish(f'climate/{stationId}/waitForUpdate', 'yes', qos=1, retain=True)
+        self._client.publish(f'climate/station/{stationId}/waitForUpdate', 'yes', qos=1, retain=True)
     
     def releaseFromUpdate(self, stationId):
-        self._client.publish(f'climate/{stationId}/waitForUpdate', 'no', qos=1, retain=True)
+        self._client.publish(f'climate/station/{stationId}/waitForUpdate', 'no', qos=1, retain=True)
 
 
 

@@ -109,8 +109,8 @@ bool MqttClient::connect()
     }
 
     Serial.print("Subscribing to ");
-    Serial.println("climate/" STR(STATION_ID) "/waitForUpdate");
-    if (!_client.subscribe("climate/" STR(STATION_ID) "/waitForUpdate", 1))
+    Serial.println("climate/station/" STR(STATION_ID) "/waitForUpdate");
+    if (!_client.subscribe("climate/station/" STR(STATION_ID) "/waitForUpdate", 1))
     {
         Serial.println("Failed to subscribe to waitForUpdate");
         disconnect();
@@ -147,7 +147,7 @@ void MqttClient::sendSensorData(float temperature, int humidity, float vcc)
     auto dataString = "{\"temperature\": " + String(temperature) +
                         ", \"humidity\": " + String(humidity) +
                         ", \"vcc\": " + String(vcc) + "}";
-    if (!_client.publish("climate/" STR(STATION_ID) "/sensorData", dataString.c_str(), true))
+    if (!_client.publish("climate/station/" STR(STATION_ID) "/sensorData", dataString.c_str(), true))
     {
         Serial.println("Failed to publish sensor data");
         return;
@@ -169,7 +169,7 @@ void MqttClient::sendUpdateState(UpdateState state)
     }
 
     Serial.printf("Publishing waiting for update: \"%s\"\n", toString(state));
-    if (!_client.publish("climate/" STR(STATION_ID) "/updateState", toString(state), true)) // TODO: QoS 1
+    if (!_client.publish("climate/station/" STR(STATION_ID) "/updateState", toString(state), true)) // TODO: QoS 1
     {
         Serial.printf("Failed to publish waiting for update: \"%s\"\n", toString(state));
     }
