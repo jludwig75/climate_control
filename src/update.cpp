@@ -8,30 +8,6 @@
 #include "mqttclient.h"
 
 
-// static bool updateRequested()
-// {
-//     Serial.println("Checking for update...");
-//     WiFiClient wifiClient;
-//     HTTPClient httpClient;
-
-//     httpClient.begin(wifiClient, UPDATE_CHECK_URL);
-
-//     auto responseCode = httpClient.GET();
-//     if (responseCode != HTTP_CODE_OK)
-//     {
-//         Serial.printf("Error: Update check failure: %u\n", responseCode);
-//         return false;
-//     }
-
-//     auto responseData = httpClient.getString();
-
-//     httpClient.end();
-
-//     Serial.printf("Check for update response: %s\n", responseData.c_str());
-
-//     return responseData == "yes";
-// }
-
 static bool otaInitialized = false;
 static unsigned long lastUpdateCheck = 0;
 static bool updating = false;

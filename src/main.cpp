@@ -23,7 +23,6 @@ ADC_MODE(ADC_VCC);
 
 #define STATION_ID              2
 #define REPORT_INTERVAL_MINUTES 1
-#define REPORT_URL              "http://172.18.1.65:8080/report_sensor_data"
 */
 #include "config.h" // <= This file is not part of the repo code. You must add it. See above. ^^^
 
