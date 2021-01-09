@@ -98,7 +98,7 @@ class ClimateMqttClient:
         self._client.publish(f'{TOPIC_ROOT}/{self._clientType}/{stationId}/{messageType}', payload, qos=qos, retain=retain, properties=properties)
 
     def disconnect(self):
-        print('Disconnecting from MQTT broker')
+        print('Disconnecting from MQTT broker...')
         self._client.disconnect()
         print('Disconnected from MQTT broker')
         self._client.loop_stop()
