@@ -8,14 +8,24 @@ def loadClientConfig():
         return json.loads(f.read())
 
 class ClimateMqttClient:
-    def __init__(self, clientId, clientType, ip, port, user, passwd, subscribedMessageTypes = None, subscriptionClientId = None):
+    def __init__(self,
+                    clientId,
+                    clientType,
+                    ip,
+                    port,
+                    user,
+                    passwd,
+                    subscribedMessageMap = None,
+                    subscriptionClientId = None):
         self._clientId = clientId
         self._clientType = clientType
         self._mqttServer = ip
         self._port = port
         self._userName = user
         self._password = passwd
-        self._subscribedMessageTypes = subscribedMessageTypes
+        self._subscribedMessageMap = subscribedMessageMap
+        self._subscribedClientTypes = [k for k in subscribedMessageMap.keys()]
+        print(self._subscribedClientTypes)
         self._subscriptionClientId = subscriptionClientId
 
     def connect(self, runForever = False):
@@ -41,14 +51,15 @@ class ClimateMqttClient:
             self._connected = False
 
     def _handleSubscriptions(self):
-        if self._subscribedMessageTypes is not None and len(self._subscribedMessageTypes) > 0:
-            for messageType in self._subscribedMessageTypes:
-                clientIdPathPart = '+'
-                if self._subscriptionClientId is not None:
-                    clientIdPathPart = str(self._subscriptionClientId)
-                subscriptionPath = f'{TOPIC_ROOT}/{self._clientType}/{clientIdPathPart}/{messageType}'
-                print(f'Subscribing to {subscriptionPath}')
-                self._client.subscribe(subscriptionPath, qos=1)
+        if self._subscribedMessageMap is not None and len(self._subscribedMessageMap.keys()) > 0:
+            for clientType, messageTypes in self._subscribedMessageMap.items():
+                for messageType in messageTypes:
+                    clientIdPathPart = '+'
+                    if self._subscriptionClientId is not None:
+                        clientIdPathPart = str(self._subscriptionClientId)
+                    subscriptionPath = f'{TOPIC_ROOT}/{clientType}/{clientIdPathPart}/{messageType}'
+                    print(f'Subscribing to {subscriptionPath}')
+                    self._client.subscribe(subscriptionPath, qos=1)
 
     def _on_message(self, client, userdata, message):
         # print(f'Received message: retain={message.retain} timestamp={message.timestamp} topic="{message.topic}" payload="{message.payload}"')
@@ -68,7 +79,7 @@ class ClimateMqttClient:
             return None
         baseTopic, clientType, stationId, messageType = topicParts
 
-        if baseTopic != 'climate' or clientType != self._clientType or messageType not in self._subscribedMessageTypes:
+        if baseTopic != 'climate' or clientType not in self._subscribedMessageMap.keys() or messageType not in self._subscribedMessageMap[clientType]:
             print(f'Message type does not match subscription: {message.topic}')
             return None
 

@@ -10,7 +10,14 @@ class HvacController(ClimateMqttClient):
     MODE_COOL="Cool"
     def __init__(self, clientId, stationId, ip, port, user, passwd):
         self._stationId = stationId
-        super().__init__(clientId, CLIENT_HVAC_CONTROLLER, ip, port, user, passwd, subscribedMessageTypes=[HVAC_MSG_TYPE_REQUEST_MODE], subscriptionClientId=stationId)
+        super().__init__(clientId,
+                            CLIENT_HVAC_CONTROLLER,
+                            ip,
+                            port,
+                            user,
+                            passwd,
+                            subscribedMessageMap={ CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE] },
+                            subscriptionClientId=stationId)
         self._mode =HvacController.MODE_OFF
 
     def run(self):

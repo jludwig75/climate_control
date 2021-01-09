@@ -13,7 +13,14 @@ report_interval_ms = 60 * 1000
 
 class MockStationClient(ClimateMqttClient):
     def __init__(self, stationId, ip, port, user, passwd):
-        super().__init__(f'dummy-station-{stationId}', CLIENT_STATION, ip, port, user, passwd, subscribedMessageTypes=[STATION_MSG_TYPE_WAIT_FOR_UPDATE], subscriptionClientId=stationId)
+        super().__init__(f'dummy-station-{stationId}',
+                            CLIENT_STATION,
+                            ip,
+                            port,
+                            user,
+                            passwd,
+                            subscribedMessageMap={ CLIENT_STATION: [STATION_MSG_TYPE_WAIT_FOR_UPDATE] },
+                            subscriptionClientId=stationId)
         self._stationId = stationId
         self._waitForUpdate = False
 

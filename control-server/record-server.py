@@ -8,7 +8,7 @@ import time
 
 class DataRecorder(ClimateMqttClient):
     def __init__(self, mqttServer, port, userName, password, clientInstance = 0):
-        super().__init__(f'record-server-{clientInstance}', CLIENT_STATION, mqttServer, port, userName, password, [STATION_MSG_TYPE_SENSOR_DATA])
+        super().__init__(f'record-server-{clientInstance}', CLIENT_STATION, mqttServer, port, userName, password, subscribedMessageMap={ CLIENT_STATION: [STATION_MSG_TYPE_SENSOR_DATA] })
 
     def run(self):
         self.connect(runForever=True)
