@@ -1,4 +1,5 @@
 import paho.mqtt.client as mqtt
+from climate.topics import *
 
 
 class ClimateMqttClient:
@@ -40,7 +41,7 @@ class ClimateMqttClient:
                 clientIdPathPart = '+'
                 if self._subscriptionClientId is not None:
                     clientIdPathPart = str(self._subscriptionClientId)
-                subscriptionPath = f'climate/{self._clientType}/{clientIdPathPart}/{messageType}'
+                subscriptionPath = f'{TOPIC_ROOT}/{self._clientType}/{clientIdPathPart}/{messageType}'
                 print(f'Subscribing to {subscriptionPath}')
                 self._client.subscribe(subscriptionPath, qos=1)
 
@@ -73,6 +74,9 @@ class ClimateMqttClient:
             return None
         
         return (stationId, messageType)
+
+    def publish(self, stationId, messageType, payload=None, qos=0, retain=False, properties=None):
+        self._client.publish(f'{TOPIC_ROOT}/{self._clientType}/{stationId}/{messageType}', payload, qos=qos, retain=retain, properties=properties)
 
     def disconnect(self):
         print('Disconnecting from MQTT broker')

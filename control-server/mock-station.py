@@ -55,7 +55,7 @@ class MockStationClient(ClimateMqttClient):
     UPDATE_STATE_UPDATE_COMPLETE = 'UpdateComplete'
     def sendUpdateState(self, state):
         print(f'Station {self._stationId} sending update state "{state}"')
-        self._client.publish(f'climate/station/{self._stationId}/updateState', state, qos=1, retain=True)
+        self.publish(self._stationId, 'updateState', state, qos=1, retain=True)
 
 
 class UpdateChecker:
