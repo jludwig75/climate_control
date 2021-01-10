@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from climate.client import ClimateMqttClient, loadClientConfig
+from climate.thermostatpolicy import AveragingThermostatPolicy
 from climate.topics import *
 import json
 
@@ -17,7 +18,8 @@ class ControlServer(ClimateMqttClient):
                             subscribedMessageMap={ CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE], CLIENT_STATION: [STATION_MSG_TYPE_SENSOR_DATA] })
         self._stationSensorMap = {}
         self._averageTemperature = 0
-        self._setPoint = 69
+        self._policy = AveragingThermostatPolicy(0.5)   # 0.5 degree swing
+        self._policy.setTargetTemperature(69)
 
     def run(self):
         self.connect(runForever=True)
@@ -29,16 +31,10 @@ class ControlServer(ClimateMqttClient):
                 self._stationSensorMap[stationId] = {}
             self._stationSensorMap[stationId] = senorData
             self._computerAverageTemperature()
-            print('Average temperature=%.2f' % self._averageTemperature)
-            if self._averageTemperature < self._setPoint - 0.5:
-                print('Requesting heat')
-                self._requestHvacMode(HVAC_MODE_HEAT)
-            elif self._averageTemperature > self._setPoint + 0.5:
-                print('Requesting cool')
-                self._requestHvacMode(HVAC_MODE_COOL)
-            else:
-                print('Requesting fan only')
-                self._requestHvacMode(HVAC_MODE_FAN)
+            print(f'Average temperature={self._averageTemperature:.2f}')
+            desiredMode = self._policy.determineDesiredHvacMode(self._stationSensorMap)
+            if desiredMode is not None:
+                self._requestHvacMode(desiredMode)
     
     def _computerAverageTemperature(self):
         if len(self._stationSensorMap) == 0:
@@ -51,6 +47,7 @@ class ControlServer(ClimateMqttClient):
         self._averageTemperature = temp / count
     
     def _requestHvacMode(self, mode):
+        print(f'Requesting HVAC controller mode {mode}')
         self.publish(self._hvacStationId, HVAC_MSG_TYPE_REQUEST_MODE, mode, qos=1, retain=True)
 
 if __name__ == "__main__":
