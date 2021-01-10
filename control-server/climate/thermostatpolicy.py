@@ -3,7 +3,7 @@ import json
 import os
 
 
-STATION_WEIGHTS_FILE_NAME='station_weights.json'
+STATION_WEIGHTS_FILE_NAME='station_weights.json'    # TODO: This needs to be moved to the database. Issue #3
 
 def loadStationWeights():
     if not os.path.exists(STATION_WEIGHTS_FILE_NAME):
