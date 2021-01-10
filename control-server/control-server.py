@@ -5,8 +5,9 @@ import json
 
 
 class ControlServer(ClimateMqttClient):
-    def __init__(self, clientId, stationId, ip, port, user, passwd):
+    def __init__(self, clientId, stationId, hvacStationId, ip, port, user, passwd):
         self._stationId = stationId
+        self._hvacStationId = hvacStationId
         super().__init__(clientId,
                             CLIENT_HVAC_CONTROLLER,
                             ip,
@@ -16,7 +17,7 @@ class ControlServer(ClimateMqttClient):
                             subscribedMessageMap={ CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE], CLIENT_STATION: [STATION_MSG_TYPE_SENSOR_DATA] })
         self._stationSensorMap = {}
         self._averageTemperature = 0
-        self._setPoint = 68
+        self._setPoint = 69
 
     def run(self):
         self.connect(runForever=True)
@@ -30,11 +31,14 @@ class ControlServer(ClimateMqttClient):
             self._computerAverageTemperature()
             print('Average temperature=%.2f' % self._averageTemperature)
             if self._averageTemperature < self._setPoint - 0.5:
-                pass # TODO: Request heat
+                print('Requesting heat')
+                self._requestHvacMode(HVAC_MODE_HEAT)
             elif self._averageTemperature > self._setPoint + 0.5:
-                pass # TODO: Request cool
+                print('Requesting cool')
+                self._requestHvacMode(HVAC_MODE_COOL)
             else:
-                pass # TODO: Request fan only
+                print('Requesting fan only')
+                self._requestHvacMode(HVAC_MODE_FAN)
     
     def _computerAverageTemperature(self):
         if len(self._stationSensorMap) == 0:
@@ -45,8 +49,11 @@ class ControlServer(ClimateMqttClient):
             temp += sensorData['temperature']
             count += 1
         self._averageTemperature = temp / count
+    
+    def _requestHvacMode(self, mode):
+        self.publish(self._hvacStationId, HVAC_MSG_TYPE_REQUEST_MODE, mode, qos=1, retain=True)
 
 if __name__ == "__main__":
     cfg = loadClientConfig()
-    hvacController = ControlServer('control-server-0', 0, cfg['mqtt_broker'], cfg['mqtt_port'], cfg['mqtt_user_name'], cfg['mqtt_password'])
+    hvacController = ControlServer('control-server-0', 0, 0, cfg['mqtt_broker'], cfg['mqtt_port'], cfg['mqtt_user_name'], cfg['mqtt_password'])
     hvacController.run()

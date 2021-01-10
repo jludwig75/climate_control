@@ -10,6 +10,11 @@ STATION_MSG_TYPE_WAIT_FOR_UPDATE='waitForUpdate'
 HVAC_MSG_TYPE_REQUEST_MODE='requestMode'
 HVAC_MSG_TYPE_CURRENT_MODE='currentMode'
 
+HVAC_MODE_OFF="Off"
+HVAC_MODE_FAN="Fan"
+HVAC_MODE_HEAT="Heat"
+HVAC_MODE_COOL="Cool"
+
 """
 Conversations
 =============

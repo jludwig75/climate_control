@@ -4,10 +4,6 @@ from climate.topics import *
 
 
 class HvacController(ClimateMqttClient):
-    MODE_OFF="Off"
-    MODE_FAN="Fan"
-    MODE_HEAT="Heat"
-    MODE_COOL="Cool"
     def __init__(self, clientId, stationId, ip, port, user, passwd):
         self._stationId = stationId
         super().__init__(clientId,
@@ -18,7 +14,7 @@ class HvacController(ClimateMqttClient):
                             passwd,
                             subscribedMessageMap={ CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE] },
                             subscriptionClientId=stationId)
-        self._mode =HvacController.MODE_OFF
+        self._mode = HVAC_MODE_OFF
 
     def run(self):
         self.connect(runForever=True)
@@ -38,7 +34,7 @@ class HvacController(ClimateMqttClient):
                 print(f'Exception parsing message payload {message.payload}: {e}')
                 return
 
-            if not mode in [HvacController.MODE_OFF, HvacController.MODE_FAN, HvacController.MODE_HEAT, HvacController.MODE_COOL]:
+            if not mode in [HVAC_MODE_OFF, HVAC_MODE_FAN, HVAC_MODE_HEAT, HVAC_MODE_COOL]:
                 print(f'Unsupported mode {mode} requested of station {self._stationId}')
                 return
             
