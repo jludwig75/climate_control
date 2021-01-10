@@ -1,4 +1,15 @@
 from climate.topics import *
+import json
+import os
+
+
+STATION_WEIGHTS_FILE_NAME='station_weights.json'
+
+def loadStationWeights():
+    if not os.path.exists(STATION_WEIGHTS_FILE_NAME):
+        return {}
+    with open(STATION_WEIGHTS_FILE_NAME) as f:
+        return json.loads(f.read())
 
 
 class ThermostatPolicy:
@@ -13,6 +24,7 @@ class AveragingThermostatPolicy(ThermostatPolicy):
     def __init__(self, swing):
         self._targetTemperature = 70
         self._swing = swing
+        self._stationWeights = loadStationWeights()
 
     def setTargetTemperature(self, targetTemperature):
         self._targetTemperature = targetTemperature
@@ -25,10 +37,18 @@ class AveragingThermostatPolicy(ThermostatPolicy):
             return HVAC_MODE_COOL
         return HVAC_MODE_FAN
     
+    def _getStationWeight(self, stationId):
+        if stationId in self._stationWeights:
+            return self._stationWeights[stationId]
+        return 1
+
     def _averageTemperature(self, stationSensorMap):
         if len(stationSensorMap.keys()) == 0:
             return None
         temp = 0
+        count = 0
         for stationId, sensorState in stationSensorMap.items():
-            temp += sensorState['temperature']
-        return temp / len(stationSensorMap.keys())
+            weight = self._getStationWeight(stationId)
+            temp += weight * sensorState['temperature']
+            count += weight
+        return temp / count
