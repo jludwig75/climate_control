@@ -4,3 +4,4 @@ include/config.h
 __pycache__
 control-server/config.json
 control-server/station_weights.json
+*.pyc

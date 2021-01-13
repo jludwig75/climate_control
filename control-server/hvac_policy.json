@@ -1,0 +1,18 @@
+{
+    "Off":  {
+                "minimum_runtime": 60
+            },
+    "Fan":  {
+                "minimum_runtime": 60
+            },
+    "Heat": {
+                "maximum_runtime": 3600,
+                "rundown_time": 60,
+                "minimum_runtime": 60
+            },
+    "Cool": {
+                "maximum_runtime": 3600,
+                "rundown_time": 60,
+                "minimum_runtime": 60
+            }
+}
