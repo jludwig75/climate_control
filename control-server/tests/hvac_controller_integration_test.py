@@ -78,17 +78,17 @@ class HvacControllerIntegrationTest(unittest.TestCase):
                                             'Klima')
         self.controller.run(False)
         self.testClient.connect()
-        time.sleep(0.01)    # Give clients time to receive retained messages
+        time.sleep(0.05)    # Give clients time to receive retained messages
 
     def tearDown(self):
         self.testClient.requestMode(HVAC_MODE_OFF)
-        time.sleep(0.01)    # Give controller time to receive messages and for current mode to run down
+        time.sleep(0.05)    # Give controller time to receive messages and for current mode to run down
         self.controller.disconnect()
         self.testClient.disconnect()
     
     def testTurnOnFan(self):
         self.testClient.requestMode(HVAC_MODE_FAN)
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
@@ -97,7 +97,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
     def testTurnOnFanThenOff(self):
         self.testClient.requestMode(HVAC_MODE_FAN)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
@@ -105,7 +105,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
 
         self.testClient.requestMode(HVAC_MODE_OFF)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller,
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller,
                             # but not enough to run for the minimum runtime
         self.assertEqual(len(self.testClient.messages), 0)
 
@@ -119,7 +119,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
     def testTurnOnHeat(self):
         self.testClient.requestMode(HVAC_MODE_HEAT)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
@@ -128,7 +128,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
     def testTurnOnHeatThenOff(self):
         self.testClient.requestMode(HVAC_MODE_HEAT)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
@@ -136,7 +136,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
 
         self.testClient.requestMode(HVAC_MODE_OFF)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller,
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller,
                             # but not enough to run for the minimum runtime
         self.assertEqual(len(self.testClient.messages), 0)
 
@@ -147,8 +147,8 @@ class HvacControllerIntegrationTest(unittest.TestCase):
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
         self.assertEqual(message.mode, HVAC_MODE_FAN)
 
-        # Now wait long enough for the heat run-down time
-        time.sleep(HVAC_POLICY[HVAC_MODE_HEAT]['rundown_time'])
+        # Now wait long enough for the max of the heat run-down time or the the minumum FAN runtime
+        time.sleep(max(HVAC_POLICY[HVAC_MODE_HEAT]['rundown_time'], HVAC_POLICY[HVAC_MODE_FAN]['minimum_runtime']))
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
@@ -157,7 +157,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
     def testTurnOnCoolThenOff(self):
         self.testClient.requestMode(HVAC_MODE_COOL)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
@@ -165,7 +165,7 @@ class HvacControllerIntegrationTest(unittest.TestCase):
 
         self.testClient.requestMode(HVAC_MODE_OFF)
 
-        time.sleep(0.01)    # Give client enough time to receive current mode message from controller,
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller,
                             # but not enough to run for the minimum runtime
         self.assertEqual(len(self.testClient.messages), 0)
 
@@ -176,12 +176,86 @@ class HvacControllerIntegrationTest(unittest.TestCase):
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
         self.assertEqual(message.mode, HVAC_MODE_FAN)
 
-        # Now wait long enough for the cool run-down time
-        time.sleep(HVAC_POLICY[HVAC_MODE_COOL]['rundown_time'])
+        # Now wait long enough for the max of the cool run-down time or the the minumum FAN runtime
+        time.sleep(max(HVAC_POLICY[HVAC_MODE_COOL]['rundown_time'], HVAC_POLICY[HVAC_MODE_FAN]['minimum_runtime']))
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
         self.assertEqual(message.mode, HVAC_MODE_OFF)
-    
+
+    def testTurnOnHeatThenCoolThenOff(self):
+        self.testClient.requestMode(HVAC_MODE_HEAT)
+
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_HEAT)
+
+        self.testClient.requestMode(HVAC_MODE_COOL)
+
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller,
+                            # but not enough to run for the minimum runtime
+        self.assertEqual(len(self.testClient.messages), 0)
+
+        # Now wait long enough for the minimum heat run time
+        time.sleep(HVAC_POLICY[HVAC_MODE_HEAT]['minimum_runtime'] + 0.05)
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+
+        # Now wait long enough for the max of the heat run-down time or the the minumum FAN runtime
+        time.sleep(max(HVAC_POLICY[HVAC_MODE_HEAT]['rundown_time'], HVAC_POLICY[HVAC_MODE_FAN]['minimum_runtime']))
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_COOL)
+
+    def testTurnOnFanHeatThenOff(self):
+        ### Request Fan On
+        self.testClient.requestMode(HVAC_MODE_FAN)
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
+
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+
+        ### Request Heat
+        self.testClient.requestMode(HVAC_MODE_HEAT)
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller
+
+        self.assertEqual(len(self.testClient.messages), 0)
+
+        # Now wait long enough for the minimum fan run time
+        time.sleep(HVAC_POLICY[HVAC_MODE_FAN]['minimum_runtime'])
+
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_HEAT)
+
+        ### Request Off
+        self.testClient.requestMode(HVAC_MODE_OFF)
+        time.sleep(0.05)    # Give client enough time to receive current mode message from controller,
+                            # but not enough to run for the minimum runtime
+        self.assertEqual(len(self.testClient.messages), 0)
+
+        # Now wait long enough for the minimum heat run time
+        time.sleep(HVAC_POLICY[HVAC_MODE_HEAT]['minimum_runtime'])
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+
+        # Now wait long enough for the max of the heat run-down time or the the minumum FAN runtime
+        time.sleep(max(HVAC_POLICY[HVAC_MODE_HEAT]['rundown_time'], HVAC_POLICY[HVAC_MODE_FAN]['minimum_runtime']))
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_OFF)
+
+
 if __name__ == '__main__':
     unittest.main()
