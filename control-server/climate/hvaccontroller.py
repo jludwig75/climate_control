@@ -16,18 +16,23 @@ class HvacController(ClimateMqttClient):
                             passwd,
                             subscribedMessageMap={ CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE] },
                             subscriptionClientId=stationId)
-        self._currentMode = None
+        self._currentMode = HVAC_MODE_OFF
         self._currentModeExpiration = None
         self._policy = HvacControllerPolicy()
         self._timer = None
         self._initialized = False
+        self._pendingRequestedMode = None
 
     def run(self, runForever=True):
         self.connect(runForever)
     
     def _onIinit(self):
-        self._setMode(HVAC_MODE_OFF)
+        # Do this to reflect the initial start state
+        self._reportMode()
         self._initialized = True
+        # Now respond to any request we may have been given.
+        if self._pendingRequestedMode is not None:
+            self._setMode(self._pendingRequestedMode)
 
     def _onMessage(self, stationId, messageType, message):
         if messageType == HVAC_MSG_TYPE_REQUEST_MODE:
@@ -49,6 +54,7 @@ class HvacController(ClimateMqttClient):
 
     def _setMode(self, requestedMode):
         if not self._initialized:
+            self._pendingRequestedMode = requestedMode
             return
         if self._timer is not None:
             self._timer.cancel()

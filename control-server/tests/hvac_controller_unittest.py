@@ -21,15 +21,17 @@ TEST_CONTROLLER_ID = TEST_ID_BASE
 
 
 class HvacControllerUnitTest(unittest.TestCase):
-    def testSetRequestedModeImmediately(self):
-        controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "")
-        controller._onIinit()
+    def setUp(self):
+        self.controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "")
+        self.controller._onIinit()
         time.sleep(0.1)
+        ClimateMqttClient.publishedRequests.clear()
 
+    def testSetRequestedModeImmediately(self):
         HvacControllerPolicy.mockNextCall((HVAC_MODE_FAN, time.time()))
-        controller._onMessage(TEST_CONTROLLER_ID, HVAC_MSG_TYPE_REQUEST_MODE, Msg(HVAC_MODE_FAN))
+        self.controller._onMessage(TEST_CONTROLLER_ID, HVAC_MSG_TYPE_REQUEST_MODE, Msg(HVAC_MODE_FAN))
 
-        self.assertEqual(controller._timer, None)
+        self.assertEqual(self.controller._timer, None)
 
         self.assertEqual(len(ClimateMqttClient.publishedRequests), 1)
         publishRequest = ClimateMqttClient.publishedRequests.pop(0)
@@ -38,15 +40,11 @@ class HvacControllerUnitTest(unittest.TestCase):
         self.assertEqual(publishRequest.payload, HVAC_MODE_FAN)
 
     def testSetNotRequestedModeImmediately(self):
-        controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "")
-        controller._onIinit()
-        time.sleep(0.1)
-
         # This node does not make sense, but it doesn't matter for this test.
         HvacControllerPolicy.mockNextCall((HVAC_MODE_COOL, time.time() + 0.1))
-        controller._onMessage(TEST_CONTROLLER_ID, HVAC_MSG_TYPE_REQUEST_MODE, Msg(HVAC_MODE_FAN))
+        self.controller._onMessage(TEST_CONTROLLER_ID, HVAC_MSG_TYPE_REQUEST_MODE, Msg(HVAC_MODE_FAN))
 
-        self.assertNotEqual(controller._timer, None)
+        self.assertNotEqual(self.controller._timer, None)
 
         self.assertEqual(len(ClimateMqttClient.publishedRequests), 1)
         publishRequest = ClimateMqttClient.publishedRequests.pop(0)
