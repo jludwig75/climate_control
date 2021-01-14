@@ -26,7 +26,11 @@ class ControlServer(ClimateMqttClient):
     
     def _onMessage(self, stationId, messageType, message):
         if messageType == STATION_MSG_TYPE_SENSOR_DATA:
-            senorData = json.loads(message.payload.decode('utf-8'))
+            try:
+                senorData = json.loads(message.payload.decode('utf-8'))
+            except Exception as e:
+                print(f'Exception {e} parsing payload {message.payload}')
+                return
             if not stationId in self._stationSensorMap:
                 self._stationSensorMap[stationId] = {}
             self._stationSensorMap[stationId] = senorData
