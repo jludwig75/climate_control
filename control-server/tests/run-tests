@@ -1,0 +1,4 @@
+#!/bin/sh
+PYTHONPATH=.. ./hvac_policy_unittest.py
+PYTHONPATH=.. ./hvac_controller_unittest.py
+PYTHONPATH=.. ./hvac_controller_integration_test.py
