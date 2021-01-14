@@ -6,6 +6,23 @@ import json
 import time
 import unittest
 
+"""
+PlatformIO keeps reverting this:
+
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/control-server"
+            },
+            "cwd": "${workspaceFolder}/control-server/tests"
+        },
+
+"""
+
 
 TEST_ID_BASE = int(1e6)
 TEST_CONTROLLER_ID = TEST_ID_BASE
