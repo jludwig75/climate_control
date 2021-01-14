@@ -23,6 +23,8 @@ TEST_CONTROLLER_ID = TEST_ID_BASE
 class HvacControllerUnitTest(unittest.TestCase):
     def testSetRequestedModeImmediately(self):
         controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "")
+        controller._onIinit()
+        time.sleep(0.1)
 
         HvacControllerPolicy.mockNextCall((HVAC_MODE_FAN, time.time()))
         controller._onMessage(TEST_CONTROLLER_ID, HVAC_MSG_TYPE_REQUEST_MODE, Msg(HVAC_MODE_FAN))
@@ -37,6 +39,8 @@ class HvacControllerUnitTest(unittest.TestCase):
 
     def testSetNotRequestedModeImmediately(self):
         controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "")
+        controller._onIinit()
+        time.sleep(0.1)
 
         # This node does not make sense, but it doesn't matter for this test.
         HvacControllerPolicy.mockNextCall((HVAC_MODE_COOL, time.time() + 0.1))
