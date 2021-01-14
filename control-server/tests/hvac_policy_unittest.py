@@ -6,8 +6,6 @@ import sys
 import time
 import unittest
 
-sys.path.append('..')
-
 from climate.hvacpolicy import HvacControllerPolicy
 from climate.topics import *
 
