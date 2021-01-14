@@ -9,7 +9,7 @@ Restart=always
 RestartSec=1
 User=jludwig
 WorkingDirectory=/home/jludwig/code/climate_control/control-server
-ExecStart=/usr/bin/env python3 /home/jludwig/code/climate_control/control-server/control-server.py
+ExecStart=/usr/bin/env python3 -u /home/jludwig/code/climate_control/control-server/control-server.py
 
 [Install]
 WantedBy=multi-user.target
