@@ -1,6 +1,6 @@
 [Unit]
 Description=Climate Control Data Reporter Web Server
-After=network.target
+After=climate-recorder.service
 StartLimitIntervalSec=0
 
 [Service]
