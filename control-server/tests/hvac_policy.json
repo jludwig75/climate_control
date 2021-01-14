@@ -3,16 +3,16 @@
                 "minimum_runtime": 0
             },
     "Fan":  {
-                "minimum_runtime": 0.01
+                "minimum_runtime": 0.04
             },
     "Heat": {
-                "maximum_runtime": 0.06,
-                "rundown_time": 0.03,
-                "minimum_runtime": 0.01
+                "maximum_runtime": 0.24,
+                "rundown_time": 0.12,
+                "minimum_runtime": 0.04
             },
     "Cool": {
-                "maximum_runtime": 0.06,
-                "rundown_time": 0.02,
-                "minimum_runtime": 0.01
+                "maximum_runtime": 0.24,
+                "rundown_time": 0.08,
+                "minimum_runtime": 0.04
             }
 }

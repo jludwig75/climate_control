@@ -29,11 +29,15 @@ class TestMqttClient(ClimateMqttClient):
                 self.stationId = stationId
                 self.messageType = messageType
                 self.message = message
+        class _HvacControllerMqttMessage(_ClimateMqttMessage):
+            def __init__(self, stationId, messageType, message):
+                super().__init__(stationId, messageType, message)
+                self.mode = message.payload.decode('utf-8')
 
         if message.retain:
-            self.retainedMessages.append(_ClimateMqttMessage(stationId, messageType, message))
+            self.retainedMessages.append(_HvacControllerMqttMessage(stationId, messageType, message))
         else:
-            self.messages.append(_ClimateMqttMessage(stationId, messageType, message))
+            self.messages.append(_HvacControllerMqttMessage(stationId, messageType, message))
     def requestMode(self, mode):
         self.publish(TEST_CONTROLLER_ID, HVAC_MSG_TYPE_REQUEST_MODE, mode, qos=1, retain=True)
 
@@ -71,6 +75,96 @@ class HvacControllerIntegrationTest(unittest.TestCase):
         self.assertEqual(len(self.testClient.messages), 1)
         message = self.testClient.messages.pop(0)
         self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+    
+    def testTurnOnFanThenOff(self):
+        self.testClient.requestMode(HVAC_MODE_FAN)
 
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+
+        self.testClient.requestMode(HVAC_MODE_OFF)
+
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller,
+                            # but not enough to run for the minimum runtime
+        self.assertEqual(len(self.testClient.messages), 0)
+
+        # Now wait long enough for the minimum fan run time
+        time.sleep(HVAC_POLICY[HVAC_MODE_FAN]['minimum_runtime'])
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_OFF)
+
+    def testTurnOnHeat(self):
+        self.testClient.requestMode(HVAC_MODE_HEAT)
+
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_HEAT)
+
+    def testTurnOnHeatThenOff(self):
+        self.testClient.requestMode(HVAC_MODE_HEAT)
+
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_HEAT)
+
+        self.testClient.requestMode(HVAC_MODE_OFF)
+
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller,
+                            # but not enough to run for the minimum runtime
+        self.assertEqual(len(self.testClient.messages), 0)
+
+        # Now wait long enough for the minimum heat run time
+        time.sleep(HVAC_POLICY[HVAC_MODE_HEAT]['minimum_runtime'])
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+
+        # Now wait long enough for the heat run-down time
+        time.sleep(HVAC_POLICY[HVAC_MODE_HEAT]['rundown_time'])
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_OFF)
+
+    def testTurnOnCoolThenOff(self):
+        self.testClient.requestMode(HVAC_MODE_COOL)
+
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_COOL)
+
+        self.testClient.requestMode(HVAC_MODE_OFF)
+
+        time.sleep(0.01)    # Give client enough time to receive current mode message from controller,
+                            # but not enough to run for the minimum runtime
+        self.assertEqual(len(self.testClient.messages), 0)
+
+        # Now wait long enough for the minimum cool run time
+        time.sleep(HVAC_POLICY[HVAC_MODE_COOL]['minimum_runtime'])
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_FAN)
+
+        # Now wait long enough for the cool run-down time
+        time.sleep(HVAC_POLICY[HVAC_MODE_COOL]['rundown_time'])
+        self.assertEqual(len(self.testClient.messages), 1)
+        message = self.testClient.messages.pop(0)
+        self.assertEqual(message.messageType, HVAC_MSG_TYPE_CURRENT_MODE)
+        self.assertEqual(message.mode, HVAC_MODE_OFF)
+    
 if __name__ == '__main__':
     unittest.main()
