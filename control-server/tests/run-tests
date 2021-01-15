@@ -16,7 +16,7 @@ class TestRunner:
                 subprocess.check_output(f'./{testFile}', env={'PYTHONPATH': '..'})
             except:
                 failures += 1
-        print(f'{failures} failures running tests')
+        print(f'{failures} test suite(s) failed running tests')
         sys.exit(failures)
 
 def listFiles(dir, ending):
