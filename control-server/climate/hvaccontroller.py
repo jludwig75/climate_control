@@ -1,4 +1,4 @@
-from climate.client import ClimateMqttClient
+from climate.client import ClimateMqttClient, TEST_ID_BASE
 from climate.hvacpolicy import HvacControllerPolicy
 from climate.topics import *
 import threading
@@ -6,7 +6,7 @@ import time
 
 
 class HvacController(ClimateMqttClient):
-    def __init__(self, clientId, stationId, ip, port, user, passwd):
+    def __init__(self, clientId, stationId, ip, port, user, passwd, testClient=False):
         self._stationId = stationId
         super().__init__(clientId,
                             CLIENT_HVAC_CONTROLLER,
@@ -22,6 +22,7 @@ class HvacController(ClimateMqttClient):
         self._timer = None
         self._initialized = False
         self._pendingRequestedMode = None
+        self._testClient = testClient
 
     def run(self, runForever=True):
         self.connect(runForever)
@@ -35,6 +36,12 @@ class HvacController(ClimateMqttClient):
             self._setMode(self._pendingRequestedMode)
 
     def _onMessage(self, stationId, messageType, message):
+        if self._testClient and stationId < TEST_ID_BASE:
+            print(f'Skipping "{messageType}" message from station {stationId}')
+            return
+        elif not self._testClient and stationId >= TEST_ID_BASE:
+            print(f'Skipping "{messageType}" message from test station {stationId}')
+            return
         if messageType == HVAC_MSG_TYPE_REQUEST_MODE:
             if stationId != self._stationId:
                 print(f'Station {self._stationId} received incorrect station id {stationId}')

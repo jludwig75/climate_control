@@ -1,11 +1,11 @@
-from climate.client import ClimateMqttClient
+from climate.client import ClimateMqttClient, TEST_ID_BASE
 from climate.thermostatpolicy import AveragingThermostatPolicy
 from climate.topics import *
 import json
 
 
 class ControlServer(ClimateMqttClient):
-    def __init__(self, clientId, stationId, hvacStationId, ip, port, user, passwd):
+    def __init__(self, clientId, stationId, hvacStationId, ip, port, user, passwd, testClient=False):
         self._stationId = stationId
         self._hvacStationId = hvacStationId
         super().__init__(clientId,
@@ -19,11 +19,18 @@ class ControlServer(ClimateMqttClient):
         self._averageTemperature = 0
         self._policy = AveragingThermostatPolicy(0.5)   # 0.5 degree swing
         self._policy.setTargetTemperature(69)
+        self._testClient = testClient
 
     def run(self):
         self.connect(runForever=True)
     
     def _onMessage(self, stationId, messageType, message):
+        if self._testClient and stationId < TEST_ID_BASE:
+            print(f'Skipping "{messageType}" message from station {stationId}')
+            return
+        elif not self._testClient and stationId >= TEST_ID_BASE:
+            print(f'Skipping "{messageType}" message from test station {stationId}')
+            return
         if messageType == STATION_MSG_TYPE_SENSOR_DATA:
             try:
                 senorData = json.loads(message.payload.decode('utf-8'))

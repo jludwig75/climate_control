@@ -10,19 +10,17 @@ sys.modules['climate.client'] = __import__('mockclient')
 from climate.topics import *
 from climate.hvaccontroller import HvacController
 from climate.hvacpolicy import HvacControllerPolicy
-from climate.client import ClimateMqttClient
+from climate.client import ClimateMqttClient, TEST_ID_BASE
 
 class Msg:
     def __init__(self, mode):
         self.payload = mode.encode('utf-8')
 
-TEST_ID_BASE = int(1e6)
 TEST_CONTROLLER_ID = TEST_ID_BASE
-
 
 class HvacControllerUnitTest(unittest.TestCase):
     def setUp(self):
-        self.controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "")
+        self.controller = HvacController('test-hvac-controller-0', TEST_CONTROLLER_ID, "", 0, "", "", True)
         self.controller._onIinit()
         time.sleep(0.1)
         ClimateMqttClient.publishedRequests.clear()

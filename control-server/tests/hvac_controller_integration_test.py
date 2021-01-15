@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from climate.client import ClimateMqttClient
+from climate.client import ClimateMqttClient, TEST_ID_BASE
 from climate.hvaccontroller import HvacController
 from climate.topics import *
 import json
@@ -24,13 +24,12 @@ PlatformIO keeps reverting this:
 """
 
 
-TEST_ID_BASE = int(1e6)
 TEST_CONTROLLER_ID = TEST_ID_BASE
 
 
 class TestMqttClient(ClimateMqttClient):
     def __init__(self):
-        super().__init__("test-client-0",
+        super().__init__('test-client-0',
                         CLIENT_HVAC_CONTROLLER,
                         '172.18.1.101',
                         0,
@@ -63,7 +62,6 @@ with open ('hvac_policy.json') as f:
 
 class HvacControllerIntegrationTest(unittest.TestCase):
     def setUp(self):
-        print('setUp')
         self.testClient = TestMqttClient()
         self.testClient.connect()
         self.testClient.requestMode(HVAC_MODE_OFF)
@@ -75,7 +73,8 @@ class HvacControllerIntegrationTest(unittest.TestCase):
                                             '172.18.1.101',
                                             0,
                                             'climate',
-                                            'Klima')
+                                            'Klima',
+                                            True)
         self.controller.run(False)
         self.testClient.connect()
         time.sleep(0.05)    # Give clients time to receive retained messages

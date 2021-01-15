@@ -3,6 +3,8 @@ import json
 import paho.mqtt.client as mqtt
 
 
+TEST_ID_BASE = int(1e6)
+
 def loadClientConfig():
     with open('config.json') as f:
         return json.loads(f.read())
@@ -15,7 +17,7 @@ class ClimateMqttClient:
                     port,
                     user,
                     passwd,
-                    subscribedMessageMap = None,
+                    subscribedMessageMap = {},
                     subscriptionClientId = None):
         self._clientId = clientId
         self._clientType = clientType

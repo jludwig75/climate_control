@@ -1,5 +1,7 @@
 import json
 
+TEST_ID_BASE = int(1e6)
+
 def loadClientConfig():
     with open('config.json') as f:
         return json.loads(f.read())

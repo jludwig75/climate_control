@@ -31,6 +31,8 @@ class AveragingThermostatPolicy(ThermostatPolicy):
 
     def determineDesiredHvacMode(self, stationSensorMap):
         averageStationTemperature = self._averageTemperature(stationSensorMap)
+        if averageStationTemperature is None:
+            return None
         if averageStationTemperature < self._targetTemperature - self._swing:
             return HVAC_MODE_HEAT
         if averageStationTemperature > self._targetTemperature + self._swing:
