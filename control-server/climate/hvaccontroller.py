@@ -1,4 +1,4 @@
-from climate.client import ClimateMqttClient, loadClientConfig
+from climate.client import ClimateMqttClient
 from climate.hvacpolicy import HvacControllerPolicy
 from climate.topics import *
 import threading
