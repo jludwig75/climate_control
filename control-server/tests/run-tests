@@ -1,5 +1,27 @@
-#!/bin/sh
-PYTHONPATH=.. ./hvac_policy_unittest.py
-PYTHONPATH=.. ./hvac_controller_unittest.py
-PYTHONPATH=.. ./hvac_controller_integration_test.py
-PYTHONPATH=.. ./control_server_integration_test.py
+#!/usr/bin/env python3
+import os
+import subprocess
+import sys
+
+class TestRunner:
+    def __init__(self, testFiles):
+        self._testFiles = testFiles
+
+    def run(self):
+        failures = 0
+        for testFile in self._testFiles:
+            try:
+                testName = '.'.join(testFile.split('.')[:-1])
+                print(f'Running {testName}:')
+                subprocess.check_output(f'./{testFile}', env={'PYTHONPATH': '..'})
+            except:
+                failures += 1
+        print(f'{failures} failures running tests')
+        sys.exit(failures)
+
+def listFiles(dir, ending):
+    path = '' if dir == '.' else dir
+    return [ os.path.join(path, file) for file in os.listdir(dir) if file.endswith(ending) ]
+
+runner = TestRunner(listFiles('.', 'test.py'))
+runner.run()
