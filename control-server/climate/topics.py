@@ -2,6 +2,7 @@ TOPIC_ROOT='climate'
 
 CLIENT_STATION='station'
 CLIENT_HVAC_CONTROLLER='hvac'
+CLIENT_SCHEDULER='schedule'
 
 STATION_MSG_TYPE_SENSOR_DATA='sensorData'
 STATION_MSG_TYPE_UPDATE_STATE='updateState'
@@ -14,6 +15,8 @@ HVAC_MODE_OFF="Off"
 HVAC_MODE_FAN="Fan"
 HVAC_MODE_HEAT="Heat"
 HVAC_MODE_COOL="Cool"
+
+SCEHDULE_MSG_SET_MODE="setMode"
 
 """
 Conversations
@@ -42,6 +45,10 @@ HVAC Controller
 ------------------
     control server --> "climate/hvac/<id>/requestMode", "Off, Fan, Heat, Cool" --> HVAC controller
     control server <-- "climate/hvac/<id>/currentMode", "Off, Fan, Heat, Cool" <-- HVAC controller
+
+Schedule Update
+---------------
+    scheduler --> "climate/schedule/<id>/setMode", "{ "Heat": float, "cool": float }" --> Control Server  (One of "Heat" or "Cool" or both, empty to shut off)
 
 """
 

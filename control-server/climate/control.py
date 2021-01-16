@@ -14,7 +14,9 @@ class ControlServer(ClimateMqttClient):
                             port,
                             user,
                             passwd,
-                            subscribedMessageMap={ CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE], CLIENT_STATION: [STATION_MSG_TYPE_SENSOR_DATA] })
+                            subscribedMessageMap={  CLIENT_HVAC_CONTROLLER: [HVAC_MSG_TYPE_REQUEST_MODE],
+                                                    CLIENT_STATION: [STATION_MSG_TYPE_SENSOR_DATA],
+                                                    CLIENT_SCHEDULER: [SCEHDULE_MSG_SET_MODE] })
         self._stationSensorMap = {}
         self._averageTemperature = 0
         self._policy = AveragingThermostatPolicy(0.5)   # 0.5 degree swing
@@ -42,10 +44,25 @@ class ControlServer(ClimateMqttClient):
             self._stationSensorMap[stationId] = senorData
             self._computerAverageTemperature()
             print(f'Average temperature={self._averageTemperature:.2f}')
+            self._applyPolicy()
+        elif messageType == SCEHDULE_MSG_SET_MODE:
+            try:
+                setModeRequest = json.loads(message.payload.decode('utf-8'))
+            except Exception as e:
+                print(f'Exception {e} parsing payload {message.payload}')
+                return
+            # TODO: Only supporting heat now
+            if HVAC_MODE_HEAT in setModeRequest:
+                setPoint = float(setModeRequest[HVAC_MODE_HEAT])
+                print(f'Changing heat set point to {setPoint}')
+                self._policy.setTargetTemperature(setPoint)
+                self._applyPolicy()
+    
+    def _applyPolicy(self):
             desiredMode = self._policy.determineDesiredHvacMode(self._stationSensorMap)
             if desiredMode is not None:
                 self._requestHvacMode(desiredMode)
-    
+
     def _computerAverageTemperature(self):
         if len(self._stationSensorMap) == 0:
             return 0
