@@ -19,7 +19,6 @@ ADC_MODE(ADC_VCC);
 #define MQTT_PASSWORD   "passwd"
 
 #define DHT_TYPE    DHT22
-#define DHT_PIN     2
 
 #define STATION_ID              2
 #define REPORT_INTERVAL_MINUTES 1
