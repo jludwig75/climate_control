@@ -102,10 +102,28 @@ class StationUpdater:
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print('Invlid command arguments expect <station_id>')
-    stationIds = [int(arg) for arg in sys.argv[1:]]
+    args = sys.argv[1:]
+    releaseStations = False
+    print(args)
+    for i in range(len(args)):
+        if args[i].lower() in ['-r', '--release']:
+            releaseStations = True
+            args.pop(i)
+            print(args)
+            break
+
+    stationIds = [int(arg) for arg in args]
     cfg = loadClientConfig()
     mqttClient = UpdateControlClient(f'station-updater-0', cfg['mqtt_broker'], cfg['mqtt_port'], cfg['mqtt_user_name'], cfg['mqtt_password'])
     mqttClient.connect()
+
+    if releaseStations:
+        for stationId in stationIds:
+            print(f'Releasing station{stationId} from update...')
+            mqttClient.releaseFromUpdate(stationId)
+        mqttClient.disconnect()
+        sys.exit(0)
+
     updaters = []
     threads = []
     for stationId in stationIds:
