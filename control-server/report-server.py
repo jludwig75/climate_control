@@ -56,7 +56,7 @@ class ReportServer(object):
                 maxValue = max(dataPoint['temperature'] for dataPoint in dataPoints)
                 minValue = min(dataPoint['temperature'] for dataPoint in dataPoints)
 
-                map[3] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds, endTime)
+                map[100] = self._calculateThermostatState(stations[1], maxValue, minValue, maxAgeSeconds, endTime)
         
         return json.dumps(map)
 
