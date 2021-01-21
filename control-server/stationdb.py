@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-from datetime import datetime
+from datetime import datetime, timedelta
+from climate.topics import *
 import mariadb
 import random
 import time
+
+
+def timeOfDayToSeconds(hour, minute, second = 0):
+    return 60 * (60 * hour + minute) + second
 
 
 _CREATE_STATION_SQL ="""
@@ -27,6 +32,17 @@ CREATE TABLE sensor_data (
             ON DELETE CASCADE
     )
 """
+
+_CREATE_TABLE_MODE_CHANGE_ = """
+CREATE TABLE mode_change (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        time_of_day INT NOT NULL,
+        day_of_week TINYINT NOT NULL,
+        heat_set_point FLOAT,
+        cool_set_point FLOAT
+    )
+"""
+
 
 def _timeToTimeStamp(t):
     if not isinstance(t, datetime):
@@ -54,6 +70,8 @@ class StationDatabase:
                 cursor.execute(_CREATE_STATION_SQL)
             if not 'sensor_data' in tables:
                 cursor.execute(_CREATE_SENSOR_DATA_SQL)
+            if not 'mode_change' in tables:
+                cursor.execute(_CREATE_TABLE_MODE_CHANGE_)
 
     @staticmethod
     def createDabase(hostName='localhost'):
@@ -173,6 +191,108 @@ class StationDatabase:
         self._conn.commit()
         return StationDatabase.Station(self._conn, id, ipAddress, hostName, location)
 
+    class Schedule:
+            def __init__(self, conn, modeChangeRows):
+                self._conn = conn
+                self._id = id
+                self._schedule = [ [], [], [], [], [], [], [] ]
+                for row in modeChangeRows:
+                    timeOfDay = int(row[0])
+                    dayOfWeek = int(row[1])
+                    heatSetPoint = float(row[2]) if row[2] is not None else None
+                    coolSetPoint = float(row[3]) if row[3] is not None else None
+                    if dayOfWeek >= 7:
+                        print(f'loaded invalid day of the week {dayOfWeek} from database schedule')
+                        continue
+                    if timeOfDay >= 60 * 60 * 24:
+                        print(f'loaded invalid time of day {timeOfDay} from database schedule')
+                        continue
+                    modeChange = {'timeOfDay': timeOfDay}
+                    if heatSetPoint is not None:
+                        modeChange[HVAC_MODE_HEAT] = heatSetPoint
+                    if coolSetPoint is not None:
+                        modeChange[HVAC_MODE_COOL] = coolSetPoint
+                    self._schedule[dayOfWeek].append(modeChange)
+
+            def _decDayOfWeek(self, day):
+                if day == 0:
+                    return 6
+                return day - 1
+            
+            def _getLastModeChangeBeforeToday(self, dayOfWeek):
+                day = self._decDayOfWeek(dayOfWeek)
+                while day != dayOfWeek:
+                    if len(self._schedule[day]) > 0:
+                        return self._schedule[day][-1]
+                    day = self._decDayOfWeek(day)
+                return None
+
+            @property
+            def currentMode(self):
+                return self.getMode(datetime.now())
+            
+            def getMode(self, dt):
+                timeOfDay = dt.second + (dt.minute + dt.hour * 60) * 60
+                dayOfWeek = dt.weekday()
+                todaysSchedule = self._schedule[dayOfWeek]
+                currentMode = self._getLastModeChangeBeforeToday(dayOfWeek)
+                for modeChange in todaysSchedule:
+                    if timeOfDay >= modeChange['timeOfDay']:
+                        currentMode = modeChange
+                    else:
+                        break
+                return currentMode
+            
+            def addModeChange(self, dayOfWeek, timeOfDay, setPoints):
+                assert dayOfWeek < 7 and timeOfDay < 60 * 60 * 24
+
+                daysSchedule = self._schedule[dayOfWeek]
+                for modeChange in daysSchedule:
+                    if modeChange['timeOfDay'] == timeOfDay:
+                        self.removeModeChange(dayOfWeek, timeOfDay)
+
+                values = []
+                values.append({'field': 'day_of_week', 'value': str(dayOfWeek)})
+                values.append({'field': 'time_of_day', 'value': str(timeOfDay)})
+                if HVAC_MODE_HEAT in setPoints:
+                    values.append({'field': 'heat_set_point', 'value': str(setPoints[HVAC_MODE_HEAT])})
+                if HVAC_MODE_COOL in setPoints:
+                    values.append({'field': 'cool_set_point', 'value': str(setPoints[HVAC_MODE_COOL])})
+                fieldString = ','.join([value['field'] for value in values])
+                valueString = ','.join([value['value'] for value in values])
+                query = f"INSERT INTO mode_change ({fieldString}) VALUES ({valueString})"
+                print(query)
+                cursor = self._conn.cursor()
+                cursor.execute(query)
+                self._conn.commit()
+                modeChange = {'timeOfDay': timeOfDay}
+                if HVAC_MODE_HEAT in setPoints:
+                    modeChange[HVAC_MODE_HEAT] = setPoints[HVAC_MODE_HEAT]
+                if HVAC_MODE_COOL in setPoints:
+                    modeChange[HVAC_MODE_COOL] = setPoints[HVAC_MODE_COOL]
+                self._schedule[dayOfWeek].append(modeChange)
+                self._schedule[dayOfWeek].sort(key=lambda x: x['timeOfDay'])
+            
+            def removeModeChange(self, dayOfWeek, timeOfDay):
+                assert dayOfWeek < 7 and timeOfDay < 60 * 60 * 24
+
+                daysSchedule = self._schedule[dayOfWeek]
+                for modeChange in daysSchedule:
+                    if modeChange['timeOfDay'] == timeOfDay:
+                        cursor = self._conn.cursor()
+                        cursor.execute(f"DELETE FROM mode_change WHERE day_of_week={dayOfWeek} AND time_of_day={timeOfDay}")
+                        self._conn.commit()
+
+
+
+    
+    @property
+    def schedule(self):
+        cursor = self._conn.cursor()
+        cursor.execute('SELECT time_of_day, day_of_week, heat_set_point, cool_set_point FROM mode_change ORDER BY day_of_week, time_of_day')
+        rows = [row for row in cursor]
+        return StationDatabase.Schedule(self._conn, rows)
+
 
 def main():
     def testStationId(id):
@@ -190,23 +310,61 @@ def main():
                 station.clearDataPoints()
                 station.remove()
 
+    def testStationsAndSensorData(db):
+        for station_id in range(3):
+            stationId = testStationId(station_id)
+            station = db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
+            startTime = int(time.time())
+            for i in range(50):
+                station.addDataPoint({ 'time': startTime + i, 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42), 'vcc': random.randint(300, 340) / 100.0})
+        for id, station in db.stations.items():
+            if isTestId(id):
+                print(f'station {virtualStationId(station.id)}: ipAddress={station.ipAddress}, hostName={station.hostName}, location={station.location}')
+                for datapoint in station.dataPoints():
+                    print(f"  {datapoint['time']}: temperature={datapoint['temperature']}, humidity={datapoint['humidity']}, vcc={datapoint['vcc']}")
+
+    def testSchedule(db):
+        schedule = db.schedule
+
+        # Clear out any existing schedule
+        for dayOfWeek in range(len(schedule._schedule)):
+            for modeChange in schedule._schedule[dayOfWeek]:
+                schedule.removeModeChange(dayOfWeek, modeChange['timeOfDay'])
+            schedule._schedule[dayOfWeek].clear()
+
+        for dayOfWeek in range(7):
+            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(7, 0), { HVAC_MODE_HEAT: 69, HVAC_MODE_COOL: 70 })
+            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(8, 0), { HVAC_MODE_HEAT: 71, HVAC_MODE_COOL: 72 })
+            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(21, 0), { HVAC_MODE_HEAT: 70, HVAC_MODE_COOL: 71 })
+            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(22, 0), { HVAC_MODE_HEAT: 67, HVAC_MODE_COOL: 68 })
+
+        for dayOfWeek in range(7):
+            dt = datetime(2021, 1, 4 + dayOfWeek)
+            print(dt, dt.weekday())
+            tt = dt + timedelta(seconds=timeOfDayToSeconds(6, 59))
+            mode = schedule.getMode(tt)
+            print(mode)
+            assert HVAC_MODE_HEAT in mode
+            assert mode[HVAC_MODE_HEAT] == 67
+            tt = dt + timedelta(seconds=timeOfDayToSeconds(7, 00))
+            mode = schedule.getMode(tt)
+            print(mode)
+            assert HVAC_MODE_HEAT in mode
+            assert mode[HVAC_MODE_HEAT] == 69
+
+
     StationDatabase.createDabase()
 
     with StationDatabase() as db:
         testCleanUp(db)
 
         try:
-            for station_id in range(3):
-                stationId = testStationId(station_id)
-                station = db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
-                startTime = int(time.time())
-                for i in range(50):
-                    station.addDataPoint({ 'time': startTime + i, 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42), 'vcc': random.randint(300, 340) / 100.0})
-            for id, station in db.stations.items():
-                if isTestId(id):
-                    print(f'station {virtualStationId(station.id)}: ipAddress={station.ipAddress}, hostName={station.hostName}, location={station.location}')
-                    for datapoint in station.dataPoints():
-                        print(f"  {datapoint['time']}: temperature={datapoint['temperature']}, humidity={datapoint['humidity']}, vcc={datapoint['vcc']}")
+            testStationsAndSensorData(db)
+        finally:
+            testCleanUp(db)
+
+        try:
+            testSchedule(db)
         finally:
             testCleanUp(db)
 
