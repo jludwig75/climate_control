@@ -1,7 +1,7 @@
 from climate.client import ClimateMqttClient, TEST_ID_BASE
+from climate.stationdb import StationDatabase
 from climate.topics import *
 import json
-from stationdb import StationDatabase
 import time
 
 

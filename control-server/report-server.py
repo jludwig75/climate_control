@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import cherrypy
+from climate.stationdb import StationDatabase
 import functools
 import json
 import os
-from stationdb import StationDatabase
 import time
 
 
