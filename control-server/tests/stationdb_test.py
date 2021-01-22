@@ -42,6 +42,12 @@ class StationDbTest(unittest.TestCase):
                 dataPoint = stationDataPoints[i]
 
     def testSchedule(self):
+        TEST_MODE_CHANGES = [
+            { 'timeOfDay': timeOfDayToSeconds(7, 0), 'mode': { HVAC_MODE_HEAT: 69, HVAC_MODE_COOL: 70 } },
+            { 'timeOfDay': timeOfDayToSeconds(8, 0), 'mode': { HVAC_MODE_HEAT: 71, HVAC_MODE_COOL: 72 } },
+            { 'timeOfDay': timeOfDayToSeconds(21, 0), 'mode': { HVAC_MODE_HEAT: 70, HVAC_MODE_COOL: 71 } },
+            { 'timeOfDay': timeOfDayToSeconds(22, 0), 'mode': { HVAC_MODE_HEAT: 67, HVAC_MODE_COOL: 68 } }
+        ]
         schedule = self.db.schedule
 
         # Clear out any existing schedule
@@ -51,21 +57,41 @@ class StationDbTest(unittest.TestCase):
             schedule._schedule[dayOfWeek].clear()
 
         for dayOfWeek in range(7):
-            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(7, 0), { HVAC_MODE_HEAT: 69, HVAC_MODE_COOL: 70 })
-            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(8, 0), { HVAC_MODE_HEAT: 71, HVAC_MODE_COOL: 72 })
-            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(21, 0), { HVAC_MODE_HEAT: 70, HVAC_MODE_COOL: 71 })
-            schedule.addModeChange(dayOfWeek, timeOfDayToSeconds(22, 0), { HVAC_MODE_HEAT: 67, HVAC_MODE_COOL: 68 })
+            for modeChange in TEST_MODE_CHANGES:
+                schedule.addModeChange(dayOfWeek, modeChange['timeOfDay'], modeChange['mode'])
 
+        dt = datetime(2021, 1, 4 + dayOfWeek)
         for dayOfWeek in range(7):
-            dt = datetime(2021, 1, 4 + dayOfWeek)
-            tt = dt + timedelta(seconds=timeOfDayToSeconds(6, 59))
-            mode = schedule.getMode(tt)
-            self.assertTrue(HVAC_MODE_HEAT in mode)
-            self.assertTrue(mode[HVAC_MODE_HEAT] == 67)
-            tt = dt + timedelta(seconds=timeOfDayToSeconds(7, 00))
-            mode = schedule.getMode(tt)
-            self.assertTrue(HVAC_MODE_HEAT in mode)
-            self.assertEqual(mode[HVAC_MODE_HEAT], 69)
+            for i in range(len(TEST_MODE_CHANGES)):
+                modeChange = TEST_MODE_CHANGES[i]
+                if i == 0:
+                    previousModeChange = TEST_MODE_CHANGES[-1]
+                else:
+                    previousModeChange = TEST_MODE_CHANGES[i - 1]
+                
+                # Test 1 minute before the mode change time
+                tt = dt + timedelta(seconds=modeChange['timeOfDay'] - 60)
+                mode = schedule.getMode(tt)
+                self.assertTrue(HVAC_MODE_HEAT in mode)
+                self.assertTrue(mode[HVAC_MODE_HEAT] == previousModeChange['mode'][HVAC_MODE_HEAT])
+                self.assertTrue(HVAC_MODE_COOL in mode)
+                self.assertTrue(mode[HVAC_MODE_COOL] == previousModeChange['mode'][HVAC_MODE_COOL])
+                
+                # Test right at the the mode change time
+                tt = dt + timedelta(seconds=modeChange['timeOfDay'])
+                mode = schedule.getMode(tt)
+                self.assertTrue(HVAC_MODE_HEAT in mode)
+                self.assertTrue(mode[HVAC_MODE_HEAT] == modeChange['mode'][HVAC_MODE_HEAT])
+                self.assertTrue(HVAC_MODE_COOL in mode)
+                self.assertTrue(mode[HVAC_MODE_COOL] == modeChange['mode'][HVAC_MODE_COOL])
+                
+                # Test 1 minute after the the mode change time
+                tt = dt + timedelta(seconds=modeChange['timeOfDay'] + 60)
+                mode = schedule.getMode(tt)
+                self.assertTrue(HVAC_MODE_HEAT in mode)
+                self.assertTrue(mode[HVAC_MODE_HEAT] == modeChange['mode'][HVAC_MODE_HEAT])
+                self.assertTrue(HVAC_MODE_COOL in mode)
+                self.assertTrue(mode[HVAC_MODE_COOL] == modeChange['mode'][HVAC_MODE_COOL])
 
 if __name__ == '__main__':
     unittest.main()
