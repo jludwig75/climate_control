@@ -5,17 +5,18 @@ import mariadb
 import random
 import time
 
-
-_CREATE_STATION_SQL ="""
-CREATE TABLE station (
+STATION_TABLE_NAME='station'
+_CREATE_STATION_SQL = f"""
+CREATE TABLE {STATION_TABLE_NAME} (
         id INT NOT NULL PRIMARY KEY,
         ip_address VARCHAR(16) NOT NULL,
         host_name VARCHAR(64),
         location VARCHAR(255) )
 """
 
-_CREATE_SENSOR_DATA_SQL = """
-CREATE TABLE sensor_data (
+SENSOR_DATA_TABLE_NAME='sensor_data'
+_CREATE_SENSOR_DATA_SQL = f"""
+CREATE TABLE {SENSOR_DATA_TABLE_NAME} (
         id INT AUTO_INCREMENT PRIMARY KEY,
         station_id INT NOT NULL,
         time TIMESTAMP NOT NULL,
@@ -29,13 +30,14 @@ CREATE TABLE sensor_data (
     )
 """
 
-_CREATE_TABLE_MODE_CHANGE_ = """
-CREATE TABLE mode_change (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        time_of_day INT NOT NULL,
+MODE_CHANGE_TABLE_NAME='mode_change'
+_CREATE_TABLE_MODE_CHANGE_ = f"""
+CREATE TABLE {MODE_CHANGE_TABLE_NAME} (
         day_of_week TINYINT NOT NULL,
+        time_of_day INT NOT NULL,
         heat_set_point FLOAT,
-        cool_set_point FLOAT
+        cool_set_point FLOAT,
+        PRIMARY KEY(day_of_week, time_of_day)
     )
 """
 
@@ -47,30 +49,32 @@ def _timeToTimeStamp(t):
 
 class StationDatabase:
     @staticmethod
-    def _createTables(hostName):
+    def _databaseName(useTestDatabase):
+        if useTestDatabase:
+            return 'climate_test'
+        return 'climate'
+
+    @staticmethod
+    def _createTables(hostName, useTestDatabase):
         conn = mariadb.connect(
                 user='climate',
                 password='Redhorn!1',
                 host=hostName,
-                database='climate'
+                database=StationDatabase._databaseName(useTestDatabase)
             )
 
         with conn.cursor() as cursor:
-            # Only for a destructive re-create
-            # cursor.execute('DROP TABLE station')
-            # cursor.execute('DROP TABLE sensor_data')
-
             cursor.execute('SHOW TABLES')
             tables = [row[0] for row in cursor]
-            if not 'station' in tables:
+            if not STATION_TABLE_NAME in tables:
                 cursor.execute(_CREATE_STATION_SQL)
-            if not 'sensor_data' in tables:
+            if not SENSOR_DATA_TABLE_NAME in tables:
                 cursor.execute(_CREATE_SENSOR_DATA_SQL)
-            if not 'mode_change' in tables:
+            if not MODE_CHANGE_TABLE_NAME in tables:
                 cursor.execute(_CREATE_TABLE_MODE_CHANGE_)
 
     @staticmethod
-    def createDabase(hostName='localhost'):
+    def createDabase(hostName='localhost', useTestDatabase=False):
         """ Create database and tables if they do not exist. Does nothing if they already exist """
         conn = mariadb.connect(
                 user='climate',
@@ -82,23 +86,37 @@ class StationDatabase:
             dbExists = False
             cursor.execute('SHOW DATABASES')
             for (database,) in cursor:
-                if database == 'climate':
+                if database == StationDatabase._databaseName(useTestDatabase):
                     dbExists = True
                     break
 
             if not dbExists:
-                cursor.execute('CREATE DATABASE climate')
+                cursor.execute(f'CREATE DATABASE {StationDatabase._databaseName(useTestDatabase)}')
 
-        StationDatabase._createTables(hostName)
+        StationDatabase._createTables(hostName, useTestDatabase)
+    
+    @staticmethod
+    def dropTestDatabase():
+        conn = mariadb.connect(
+                user='climate',
+                password='Redhorn!1',
+                host='localhost'
+            )
 
-    def __init__(self, hostName='localhost'):
+        with conn.cursor() as cursor:
+            cursor.execute(f'DROP DATABASE {StationDatabase._databaseName(useTestDatabase=True)}')
+
+    def __init__(self, hostName='localhost', useTestDatabase=False):
         self._hostName = hostName
         self._conn = mariadb.connect(
                 user='climate',
                 password='Redhorn!1',
                 host=self._hostName,
-                database='climate'
+                database=StationDatabase._databaseName(useTestDatabase)
             )
+
+    def close(self):
+        self._conn.close()
 
     def __enter__(self):
         return self
@@ -107,12 +125,13 @@ class StationDatabase:
         self._conn.close()
 
     class Station:
-        def __init__(self, conn, id, ipAddress, hostName, location):
+        def __init__(self, conn, id, ipAddress, hostName, location, useTestDb=False):
             self._conn = conn
             self._id = id
             self._ipAddress = ipAddress
             self._hostName = hostName
             self._location = location
+            self._useTestDb = useTestDb
 
         @property
         def id(self):
@@ -133,7 +152,7 @@ class StationDatabase:
         def dataPoints(self, maxAgeSeconds=None, endTime=None):
             """ Station data points """
             cursor = self._conn.cursor()
-            query = f"SELECT time,temperature,humidity,vcc FROM sensor_data WHERE station_id={self._id}"
+            query = f"SELECT time,temperature,humidity,vcc FROM {SENSOR_DATA_TABLE_NAME} WHERE station_id={self._id}"
             end_time = time.time()
             if endTime is not None:
                 end_time = float(endTime)
@@ -154,14 +173,14 @@ class StationDatabase:
             if dataPoint['vcc'] is not None:
                 fieldList += ', vcc'
                 values.append(str(dataPoint['vcc']))
-            query = f"INSERT INTO sensor_data ({fieldList}) VALUES ({','.join(values)})"
+            query = f"INSERT INTO {SENSOR_DATA_TABLE_NAME} ({fieldList}) VALUES ({','.join(values)})"
             cursor.execute(query)
             self._conn.commit()
         
         def clearDataPoints(self):
             """ Clear all station data points from database """
             cursor = self._conn.cursor()
-            cursor.execute(f"DELETE FROM `sensor_data` WHERE station_id={self._id}")
+            cursor.execute(f"DELETE FROM {SENSOR_DATA_TABLE_NAME} WHERE station_id={self._id}")
             self._conn.commit()
 
         def remove(self):
@@ -170,20 +189,20 @@ class StationDatabase:
                 Remove them first by calling clearDataPoints.
             """
             cursor = self._conn.cursor()
-            cursor.execute(f"DELETE FROM `station` WHERE id={self._id}")
+            cursor.execute(f"DELETE FROM {STATION_TABLE_NAME} WHERE id={self._id}")
             self._conn.commit()
 
     @property
     def stations(self):
         """ List registered stations """
         cursor = self._conn.cursor()
-        cursor.execute('SELECT * FROM station')
+        cursor.execute(f'SELECT * FROM {STATION_TABLE_NAME}')
         return {row[0]: StationDatabase.Station(self._conn, *row) for row in cursor}
     
     def addStation(self, id, ipAddress, hostName=None, location=None):
         """ Add new station """
         cursor = self._conn.cursor()
-        cursor.execute(f"INSERT INTO station (id, ip_address, host_name, location) VALUES ({id}, '{ipAddress}', '{hostName}', '{location}')")
+        cursor.execute(f"INSERT INTO {STATION_TABLE_NAME} (id, ip_address, host_name, location) VALUES ({id}, '{ipAddress}', '{hostName}', '{location}')")
         self._conn.commit()
         return StationDatabase.Station(self._conn, id, ipAddress, hostName, location)
 
@@ -193,8 +212,8 @@ class StationDatabase:
                 self._id = id
                 self._schedule = [ [], [], [], [], [], [], [] ]
                 for row in modeChangeRows:
-                    timeOfDay = int(row[0])
-                    dayOfWeek = int(row[1])
+                    dayOfWeek = int(row[0])
+                    timeOfDay = int(row[1])
                     heatSetPoint = float(row[2]) if row[2] is not None else None
                     coolSetPoint = float(row[3]) if row[3] is not None else None
                     if dayOfWeek >= 7:
@@ -256,7 +275,7 @@ class StationDatabase:
                     values.append({'field': 'cool_set_point', 'value': str(setPoints[HVAC_MODE_COOL])})
                 fieldString = ','.join([value['field'] for value in values])
                 valueString = ','.join([value['value'] for value in values])
-                query = f"INSERT INTO mode_change ({fieldString}) VALUES ({valueString})"
+                query = f"INSERT INTO {MODE_CHANGE_TABLE_NAME} ({fieldString}) VALUES ({valueString})"
                 cursor = self._conn.cursor()
                 cursor.execute(query)
                 self._conn.commit()
@@ -275,16 +294,13 @@ class StationDatabase:
                 for modeChange in daysSchedule:
                     if modeChange['timeOfDay'] == timeOfDay:
                         cursor = self._conn.cursor()
-                        cursor.execute(f"DELETE FROM mode_change WHERE day_of_week={dayOfWeek} AND time_of_day={timeOfDay}")
+                        cursor.execute(f"DELETE FROM {MODE_CHANGE_TABLE_NAME} WHERE day_of_week={dayOfWeek} AND time_of_day={timeOfDay}")
                         self._conn.commit()
-
-
-
     
     @property
     def schedule(self):
         cursor = self._conn.cursor()
-        cursor.execute('SELECT time_of_day, day_of_week, heat_set_point, cool_set_point FROM mode_change ORDER BY day_of_week, time_of_day')
+        cursor.execute(f'SELECT day_of_week, time_of_day, heat_set_point, cool_set_point FROM {MODE_CHANGE_TABLE_NAME} ORDER BY day_of_week, time_of_day')
         rows = [row for row in cursor]
         return StationDatabase.Schedule(self._conn, rows)
 

@@ -7,40 +7,24 @@ import time
 import unittest
 
 
-def testStationId(id):
-    return int(1e6 + id)
-def virtualStationId(testId):
-    assert testId >= 1e6
-    return int(testId - 1e6)
-def isTestId(id):
-    return int(id >= 1e6)
-
 def timeOfDayToSeconds(hour, minute, second = 0):
     return 60 * (60 * hour + minute) + second
 
 
 class StationDbTest(unittest.TestCase):
     def setUp(self):
-        StationDatabase.createDabase()
-        self.db = StationDatabase()
-        self._cleanDbTestData()
+        StationDatabase.createDabase(useTestDatabase=True)
+        self.db = StationDatabase(useTestDatabase=True)
 
     def tearDown(self):
-        self._cleanDbTestData()
-
-    def _cleanDbTestData(self):
-        # Clear out any previous test data
-        for id, station in self.db.stations.items():
-            if isTestId(id):
-                station.clearDataPoints()
-                station.remove()
+        self.db.close()
+        StationDatabase.dropTestDatabase()
 
     def testStationsAndSensorData(self):
         dataPoints = {}
         for station_id in range(3):
             dataPoints[station_id] = []
-            stationId = testStationId(station_id)
-            station = self.db.addStation(stationId, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
+            station = self.db.addStation(station_id, f'172.18.1.{65 + station_id}', f'tempstation0{station_id}', '')
             startTime = int(time.time())
             for i in range(50):
                 dataPoint = { 'time': startTime + i, 'temperature': random.randint(69, 71), 'humidity': random.randint(38, 42), 'vcc': random.randint(300, 340) / 100.0}
@@ -49,14 +33,13 @@ class StationDbTest(unittest.TestCase):
             for dataPoint in dataPoints[station_id]:
                 dataPoint['time'] = datetime.fromtimestamp(dataPoint['time'])
         for id, station in self.db.stations.items():
-            if isTestId(id):
-                station_id = virtualStationId(station.id)
-                stationDataPoints = station.dataPoints()
-                testDataPoints = dataPoints[station_id]
-                self.assertEqual(len(stationDataPoints), len(testDataPoints))
-                for i in range(len(stationDataPoints)):
-                    self.assertEqual(stationDataPoints[i], testDataPoints[i])
-                    dataPoint = stationDataPoints[i]
+            station_id = station.id
+            stationDataPoints = station.dataPoints()
+            testDataPoints = dataPoints[station_id]
+            self.assertEqual(len(stationDataPoints), len(testDataPoints))
+            for i in range(len(stationDataPoints)):
+                self.assertEqual(stationDataPoints[i], testDataPoints[i])
+                dataPoint = stationDataPoints[i]
 
     def testSchedule(self):
         schedule = self.db.schedule
