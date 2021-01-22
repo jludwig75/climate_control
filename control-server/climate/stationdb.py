@@ -257,7 +257,6 @@ class StationDatabase:
                 fieldString = ','.join([value['field'] for value in values])
                 valueString = ','.join([value['value'] for value in values])
                 query = f"INSERT INTO mode_change ({fieldString}) VALUES ({valueString})"
-                print(query)
                 cursor = self._conn.cursor()
                 cursor.execute(query)
                 self._conn.commit()
