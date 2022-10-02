@@ -28,3 +28,4 @@ board_kicad/*.ses
 board_kicad/*-bak
 board_kicad/temperature_station/*
 board_kicad/temperature_station.zip
+src/config.h

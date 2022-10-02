@@ -1,17 +1,20 @@
 #include "mqttclient.h"
 
+#include <string>
+
 #include <PubSubClient.h>
 #include <WiFiClient.h>
 
 #include "config.h"
 
+using namespace std;
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
 MqttClient* _this = NULL;
 
-void MqttClient::callback(char* topic, byte* payload, unsigned int length)
+void MqttClient::callback(char* topic, uint8_t* payload, unsigned int length)
 {
     Serial.print("Message arrived [");
     Serial.print(topic);
@@ -89,7 +92,7 @@ MqttClient::~MqttClient()
 }
 
 
-void MqttClient::onMessage(char* topic, byte* payload, unsigned int length)
+void MqttClient::onMessage(char* topic, uint8_t* payload, unsigned int length)
 {
     // TODO: Validate the topic
 

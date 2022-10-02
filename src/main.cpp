@@ -11,7 +11,6 @@ ADC_MODE(ADC_VCC);
 /* NOTE: please add this file (config.h) and define the following in it:
 #define WIFI_SSID       "SSID Name"
 #define WIFI_PASSWORD   "SSID Password"
-#define HOST_NAME       "Desired host name"
 
 #define MQTT_SERVER     IPAddress(192,168,0,101)
 #define MQTT_PORT       1883
@@ -20,7 +19,6 @@ ADC_MODE(ADC_VCC);
 
 #define DHT_TYPE    DHT22
 
-#define STATION_ID              2
 #define REPORT_INTERVAL_MINUTES 1
 */
 #include "config.h" // <= This file is not part of the repo code. You must add it. See above. ^^^
